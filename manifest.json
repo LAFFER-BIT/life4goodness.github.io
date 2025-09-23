@@ -2,7 +2,7 @@
   "name": "智能冰箱管理系统",
   "short_name": "智能冰箱",
   "description": "管理您的食材库存，获取智能菜品推荐和AI烹饪建议",
-  "start_url": "./enhanced_dish_management_V1.2.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f0f9ff",
