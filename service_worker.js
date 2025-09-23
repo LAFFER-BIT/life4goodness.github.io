@@ -2,7 +2,7 @@
 const CACHE_NAME = 'smart-fridge-v1.2';
 const urlsToCache = [
     './',
-    './enhanced_dish_management_V1.2.html',
+    './index.html',
     './manifest.json',
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
 ];
