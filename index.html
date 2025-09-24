@@ -1206,6 +1206,8 @@
         }
 
         function initApp() {
+            console.log('智能冰箱管理系统初始化...');
+            
             initPWA();
             initCamera();
             loadAISettings();
@@ -1221,6 +1223,11 @@
             document.getElementById('addIngredientToDish').onclick = addIngredientToDish;
             document.getElementById('saveDishBtn').onclick = saveDish;
             document.getElementById('askAI').onclick = askAI;
+            
+            // 菜单功能事件绑定
+            document.getElementById('quickAddBtn').onclick = quickAddDish;
+            document.getElementById('prevWeekBtn').onclick = () => changeWeek(-1);
+            document.getElementById('nextWeekBtn').onclick = () => changeWeek(1);
 
             ['ingredientName', 'ingredientQuantity'].forEach(id => {
                 document.getElementById(id).onkeypress = (e) => {
@@ -1239,11 +1246,14 @@
             };
 
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('./sw.js');
+                navigator.serviceWorker.register('./sw.js').catch(e => console.log('SW注册失败:', e));
             }
 
             renderAll();
             renderManageDishes();
+            initWeekCalendar();
+            
+            console.log('应用初始化完成！');
         }
 
         if (document.readyState === 'loading') {
