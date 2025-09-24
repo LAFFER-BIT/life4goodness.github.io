@@ -1,1668 +1,305 @@
-        }
-
-        // 检查是否可以制作菜品
-        function canMakeDish(dish) {
-            return dish.ingredients.every(required => {
-                const available = ingredients.find(ing => 
-                    ing.name === required.name && ing.unit === required.unit
-                );
-                return available && available.quantity >= required.quantity;
-            });
-        }
-
-        // 获取缺少的食材
-        function getMissingIngredients(dish) {
-            return dish.ingredients.filter(required => {
-                const available = ingredients.find(ing => 
-                    ing.name === required.name && ing.unit === required.unit
-                );
-                return !available || available.quantity < required.quantity;
-            }).map(missing => {
-                const available = ingredients.find(ing => 
-                    ing.name === missing.name && ing.unit === missing.unit
-                );
-                const needed = available ? 
-                    missing.quantity - available.quantity : 
-                    missing.quantity;
-                return { ...missing, needed };
-            });
-        }
-
-        // 更新推荐菜品
-        function updateRecommendedDishes() {
-            const allDishes = getAllDishes();
-            const canMake = allDishes.filter(dish => canMakeDish(dish));
-            const almostCanMake = allDishes.filter(dish => 
-                !canMakeDish(dish) && 
-                getMissingIngredients(dish).length <= 3
-            ).map(dish => ({
-                ...dish,
-                missingIngredients: getMissingIngredients(dish)
-            }));
-
-            recommendedDishes = [
-                ...canMake.map(dish => ({ ...dish, canMake: true })),
-                ...almostCanMake.map(dish => ({ ...dish, canMake: false }))
-            ];
-        }
-
-        // 渲染食材列表
-        function renderIngredients() {
-            const ingredientListElement = document.getElementById('ingredientList');
-            
-            if (ingredients.length === 0) {
-                ingredientListElement.innerHTML = '<div class="empty-message">暂无食材，请添加食材到库存</div>';
-                document.getElementById('clearBtn').style.display = 'none';
-            } else {
-                document.getElementById('clearBtn').style.display = 'block';
-                
-                const sortedIngredients = sortAndGroupIngredients([...ingredients]);
-                
-                let currentType = '';
-                let ingredientsHTML = '';
-                
-                sortedIngredients.forEach(ingredient => {
-                    if (ingredient.type !== currentType) {
-                        if (currentType !== '') {
-                            ingredientsHTML += '<div style="height: 8px;"></div>';
-                        }
-                        currentType = ingredient.type;
-                        
-                        const typeIcon = {
-                            '蔬菜': '🥬',
-                            '肉类': '🥩', 
-                            '调料': '🧂',
-                            '其他': '📦'
-                        };
-                        
-                        ingredientsHTML += `
-                            <div style="background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 100%); padding: 6px 10px; border-radius: 4px; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem; color: #374151; border-left: 3px solid ${ingredient.type === '蔬菜' ? '#22c55e' : ingredient.type === '肉类' ? '#ef4444' : ingredient.type === '调料' ? '#f59e0b' : '#6b7280'};">
-                                ${typeIcon[ingredient.type]} ${ingredient.type}
-                            </div>
-                        `;
-                    }
-                    
-                    ingredientsHTML += `
-                        <div class="ingredient-item">
-                            <div class="ingredient-info">
-                                <span class="ingredient-name">${ingredient.name}</span>
-                                <span class="ingredient-quantity">${ingredient.quantity}${ingredient.unit}</span>
-                            </div>
-                            <button class="btn btn-danger" onclick="removeIngredient(${ingredient.id})">
-                                🗑️
-                            </button>
-                        </div>
-                    `;
-                });
-                
-                ingredientListElement.innerHTML = ingredientsHTML + '<div style="height: 15px;"></div>';
-            }
-        }
-
-        // 渲染菜品推荐
-        function renderDishes() {
-            const allDishes = getAllDishes();
-            
-            if (allDishes.length === 0) {
-                document.getElementById('dishList').innerHTML = '<div class="empty-message">暂无菜品数据</div>';
-                return;
-            }
-
-            // 按可制作状态排序
-            const sortedDishes = allDishes.sort((a, b) => {
-                const aCanMake = canMakeDish(a);
-                const bCanMake = canMakeDish(b);
-                if (aCanMake && !bCanMake) return -1;
-                if (!aCanMake && bCanMake) return 1;
-                return 0;
-            });
-
-            const dishesHTML = sortedDishes.map(dish => {
-                const canMake = canMakeDish(dish);
-                const missingIngredients = canMake ? [] : getMissingIngredients(dish);
-                
-                return `
-                    <div class="dish-item ${canMake ? 'dish-available' : 'dish-missing'}" style="margin-bottom: 15px;">
-                        <div class="dish-header">
-                            <h3 class="dish-name">${dish.name}</h3>
-                            <span class="dish-status ${canMake ? 'status-available' : 'status-missing'}">
-                                ${canMake ? '✅ 可制作' : '⚠️ 缺食材'}
-                            </span>
-                        </div>
-                        <div class="dish-ingredients">
-                            <strong>所需：</strong>
-                            ${dish.ingredients.map(ing => `${ing.name}(${ing.quantity}${ing.unit})`).join('、')}
-                        </div>
-                        ${dish.description ? `<div class="dish-description">${dish.description}</div>` : ''}
-                        <div class="dish-actions">
-                            ${canMake ? 
-                                `<button class="btn btn-cook" onclick="cookDish('${dish.name}')">🍳 完成制作</button>` : 
-                                `<button class="btn btn-shopping" onclick="addMissingToShopping('${dish.name}')">🛒 采购提醒</button>`
-                            }
-                        </div>
-                        ${!canMake && missingIngredients.length > 0 ? `
-                            <div class="shopping-list">
-                                <div class="shopping-title">
-                                    🛒 需采购：
-                                </div>
-                                <div>
-                                    ${missingIngredients.map(missing => 
-                                        `<span class="shopping-item">${missing.name}: ${missing.needed}${missing.unit}</span>`
-                                    ).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            }).join('');
-            
-            document.getElementById('dishList').innerHTML = dishesHTML + '<div style="height: 30px;"></div>';
-        }
-
-        // 渲染制作历史
-        function renderCookingHistory() {
-            if (cookingHistory.length === 0) {
-                document.getElementById('cookingHistoryList').innerHTML = '<div class="empty-message" style="padding: 8px;">暂无制作记录</div>';
-            } else {
-                document.getElementById('cookingHistoryList').innerHTML = cookingHistory.map(record => `
-                    <div class="history-item">
-                        <span class="history-dish">${record.dish}</span>
-                        <span class="history-time">${record.time}</span>
-                    </div>
-                `).join('');
-            }
-        }
-
-        // 渲染管理菜品
-        function renderManageDishes() {
-            const allDishes = getAllDishes();
-            const dishCount = document.getElementById('dishCount');
-            
-            if (dishCount) {
-                dishCount.textContent = allDishes.length;
-            }
-            
-            if (allDishes.length === 0) {
-                document.getElementById('manageDishList').innerHTML = '<div class="empty-message">暂无菜品</div>';
-            } else {
-                document.getElementById('manageDishList').innerHTML = allDishes.map(dish => {
-                    const isDefault = dish.id && dish.id.startsWith('default_');
-                    return `
-                        <div class="dish-item" style="border-color: #e5e7eb; background: #f9fafb;">
-                            <div class="dish-header">
-                                <h3 class="dish-name">${dish.name}</h3>
-                                <div class="dish-actions">
-                                    <button class="btn btn-secondary" onclick="editDish('${dish.id || dish.name}')" title="编辑菜品">
-                                        ✏️ 编辑
-                                    </button>
-                                    <button class="btn btn-danger" onclick="confirmDeleteDish('${dish.id || dish.name}', '${dish.name}')" title="删除菜品">
-                                        🗑️ 删除
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="dish-ingredients">
-                                <strong>所需：</strong>
-                                ${dish.ingredients.map(ing => `${ing.name}(${ing.quantity}${ing.unit})`).join('、')}
-                            </div>
-                            ${dish.description ? `<div class="dish-description">${dish.description}</div>` : ''}
-                            <div class="dish-type-badge ${isDefault ? 'badge-default' : 'badge-custom'}">
-                                ${isDefault ? '🔒 系统预置菜品' : '🔧 自定义菜品'}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-
-        // 渲染统计信息
-        function renderStats() {
-            const allDishes = getAllDishes();
-            const availableDishes = allDishes.filter(dish => canMakeDish(dish));
-            const missingDishes = allDishes.filter(dish => !canMakeDish(dish));
-            
-            document.getElementById('statIngredients').textContent = ingredients.length;
-            document.getElementById('statAvailable').textContent = availableDishes.length;
-            document.getElementById('statMissing').textContent = missingDishes.length;
-            
-            const categoryStats = getCategoryStats(ingredients);
-            const categoryBreakdown = document.getElementById('categoryBreakdown');
-            
-            if (ingredients.length === 0) {
-                categoryBreakdown.innerHTML = '';
-            } else {
-                const categoryEmojis = {
-                    '蔬菜': '🥬',
-                    '肉类': '🥩',
-                    '调料': '🧂', 
-                    '其他': '📦'
-                };
-                
-                const breakdownText = Object.entries(categoryStats)
-                    .map(([type, count]) => `${categoryEmojis[type]}${count}`)
-                    .join(' ');
-                    
-                categoryBreakdown.innerHTML = breakdownText;
-            }
-        }
-
-        // 渲染所有内容
-        function renderAll() {
-            updateRecommendedDishes();
-            renderIngredients();
-            renderDishes();
-            renderStats();
-            renderCookingHistory();
-        }
-
-        // 保存数据到localStorage
-        function saveData() {
-            localStorage.setItem('fridgeIngredients', JSON.stringify(ingredients));
-            localStorage.setItem('customDishes', JSON.stringify(customDishes));
-            localStorage.setItem('cookingHistory', JSON.stringify(cookingHistory));
-            localStorage.setItem('deletedDefaultDishes', JSON.stringify(deletedDefaultDishes));
-        }
-
-        // 菜品管理功能
-        function addIngredientToDish() {
-            const name = document.getElementById('newIngName').value.trim();
-            const quantity = parseFloat(document.getElementById('newIngQuantity').value);
-            const unit = document.getElementById('newIngUnit').value;
-
-            if (name && quantity && quantity > 0) {
-                tempDishIngredients.push({ name, quantity, unit });
-                document.getElementById('newIngName').value = '';
-                document.getElementById('newIngQuantity').value = '';
-                renderTempIngredients();
-            } else {
-                alert('请填写完整的食材信息');
-            }
-        }
-
-        function renderTempIngredients() {
-            const container = document.getElementById('dishIngredientsList');
-            if (tempDishIngredients.length === 0) {
-                container.innerHTML = '<div class="empty-message" style="padding: 10px; font-size: 0.8rem;">暂无食材，请添加食材</div>';
-            } else {
-                container.innerHTML = tempDishIngredients.map((ing, index) => `
-                    <div class="ingredient-item" style="margin-bottom: 5px; padding: 10px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                            <div style="flex: 1; min-width: 0;">
-                                <span style="font-weight: 500;">${ing.name}</span>
-                                <span style="color: #6b7280; margin-left: 8px;">${ing.quantity}${ing.unit}</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
-                                <button class="btn btn-secondary" onclick="adjustIngredientQuantity(${index}, -0.5)" title="减少数量" style="padding: 2px 6px; font-size: 0.7rem;">
-                                    −
-                                </button>
-                                <button class="btn btn-primary" onclick="adjustIngredientQuantity(${index}, 0.5)" title="增加数量" style="padding: 2px 6px; font-size: 0.7rem;">
-                                    +
-                                </button>
-                                <button class="btn btn-danger" onclick="removeTempIngredient(${index})" title="删除食材" style="padding: 2px 6px; font-size: 0.7rem;">
-                                    🗑️
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
-
-        function removeTempIngredient(index) {
-            tempDishIngredients.splice(index, 1);
-            renderTempIngredients();
-            if (currentEditingDish) {
-                renderEditIngredients();
-            }
-        }
-
-        // 调整食材数量
-        function adjustIngredientQuantity(index, change) {
-            if (index >= 0 && index < tempDishIngredients.length) {
-                const ingredient = tempDishIngredients[index];
-                const newQuantity = ingredient.quantity + change;
-                
-                // 确保数量不小于0.5
-                if (newQuantity >= 0.5) {
-                    ingredient.quantity = Math.round(newQuantity * 10) / 10; // 保留一位小数
-                    
-                    // 重新渲染
-                    if (currentEditingDish) {
-                        renderEditIngredients();
-                    } else {
-                        renderTempIngredients();
-                    }
-                } else {
-                    // 如果数量要小于0.5，询问是否删除
-                    if (confirm(`${ingredient.name} 的数量将变为 ${newQuantity}${ingredient.unit}，这个数量太少了。是否要删除这个食材？`)) {
-                        removeTempIngredient(index);
-                    }
-                }
-            }
-        }
-
-        function saveDish() {
-            const name = document.getElementById('newDishName').value.trim();
-            const description = document.getElementById('newDishDescription').value.trim();
-
-            if (!name) {
-                alert('请输入菜品名称');
-                return;
-            }
-
-            if (tempDishIngredients.length === 0) {
-                alert('请至少添加一个食材');
-                return;
-            }
-
-            // 检查菜品名称是否已存在
-            const allDishes = getAllDishes();
-            if (allDishes.some(dish => dish.name === name)) {
-                alert('菜品名称已存在，请使用其他名称');
-                return;
-            }
-
-            const newDish = {
-                id: 'custom_' + Date.now(),
-                name,
-                description,
-                ingredients: [...tempDishIngredients]
-            };
-
-            customDishes.push(newDish);
-            saveData();
-
-            // 清空表单
-            document.getElementById('newDishName').value = '';
-            document.getElementById('newDishDescription').value = '';
-            tempDishIngredients = [];
-            renderTempIngredients();
-
-            alert('菜品添加成功！');
-            renderAll();
-            renderManageDishes();
-        }
-
-        // 编辑菜品功能
-        function editDish(dishId) {
-            // 先在自定义菜品中查找
-            let dish = customDishes.find(d => d.id === dishId || d.name === dishId);
-            
-            // 如果没找到，在系统预置菜品中查找
-            if (!dish) {
-                dish = defaultDishes.find(d => d.id === dishId || d.name === dishId);
-            }
-            
-            if (!dish) {
-                alert('未找到要编辑的菜品');
-                return;
-            }
-
-            currentEditingDish = dish;
-            tempDishIngredients = [...dish.ingredients];
-
-            document.getElementById('editDishName').value = dish.name;
-            document.getElementById('editDishDescription').value = dish.description || '';
-            renderEditIngredients();
-
-            document.getElementById('editModal').classList.add('active');
-        }
-
-        function renderEditIngredients() {
-            const container = document.getElementById('editIngredientsList');
-            if (tempDishIngredients.length === 0) {
-                container.innerHTML = '<div class="empty-message" style="padding: 10px; font-size: 0.8rem;">暂无食材，请添加食材</div>';
-            } else {
-                container.innerHTML = tempDishIngredients.map((ing, index) => `
-                    <div class="ingredient-item" style="margin-bottom: 5px; padding: 10px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                            <div style="flex: 1; min-width: 0;">
-                                <span style="font-weight: 500;">${ing.name}</span>
-                                <span style="color: #6b7280; margin-left: 8px;">${ing.quantity}${ing.unit}</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
-                                <button class="btn btn-secondary" onclick="adjustIngredientQuantity(${index}, -0.5)" title="减少数量" style="padding: 2px 6px; font-size: 0.7rem;">
-                                    −
-                                </button>
-                                <button class="btn btn-primary" onclick="adjustIngredientQuantity(${index}, 0.5)" title="增加数量" style="padding: 2px 6px; font-size: 0.7rem;">
-                                    +
-                                </button>
-                                <button class="btn btn-danger" onclick="removeTempIngredient(${index})" title="删除食材" style="padding: 2px 6px; font-size: 0.7rem;">
-                                    🗑️
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
-
-        function addEditIngredient() {
-            const name = document.getElementById('editIngName').value.trim();
-            const quantity = parseFloat(document.getElementById('editIngQuantity').value);
-            const unit = document.getElementById('editIngUnit').value;
-
-            if (name && quantity && quantity > 0) {
-                tempDishIngredients.push({ name, quantity, unit });
-                document.getElementById('editIngName').value = '';
-                document.getElementById('editIngQuantity').value = '';
-                renderEditIngredients();
-            } else {
-                alert('请填写完整的食材信息');
-            }
-        }
-
-        function saveEdit() {
-            const name = document.getElementById('editDishName').value.trim();
-            const description = document.getElementById('editDishDescription').value.trim();
-
-            if (!name) {
-                alert('请输入菜品名称');
-                return;
-            }
-
-            if (tempDishIngredients.length === 0) {
-                alert('请至少添加一个食材');
-                return;
-            }
-
-            // 检查菜品名称是否与其他菜品重复（排除当前编辑的菜品）
-            const allDishes = getAllDishes();
-            if (allDishes.some(dish => dish.name === name && dish.id !== currentEditingDish.id)) {
-                alert('菜品名称已存在，请使用其他名称');
-                return;
-            }
-
-            // 判断是否为系统预置菜品
-            const isDefaultDish = currentEditingDish.id && currentEditingDish.id.startsWith('default_');
-            
-            if (isDefaultDish) {
-                // 如果是系统预置菜品，创建新的自定义菜品并标记原菜品为已删除
-                const newCustomDish = {
-                    id: 'custom_' + Date.now(),
-                    name,
-                    description,
-                    ingredients: [...tempDishIngredients],
-                    originalId: currentEditingDish.id  // 记录原始ID
-                };
-                
-                customDishes.push(newCustomDish);
-                
-                // 标记原系统预置菜品为已删除
-                if (!deletedDefaultDishes.includes(currentEditingDish.id)) {
-                    deletedDefaultDishes.push(currentEditingDish.id);
-                }
-                
-                saveData();
-                closeEditModal();
-                alert('系统预置菜品已转换为自定义菜品并保存成功！');
-            } else {
-                // 如果是自定义菜品，直接更新
-                const dishIndex = customDishes.findIndex(d => d.id === currentEditingDish.id);
-                if (dishIndex !== -1) {
-                    customDishes[dishIndex] = {
-                        ...currentEditingDish,
-                        name,
-                        description,
-                        ingredients: [...tempDishIngredients]
-                    };
-                    saveData();
-                    closeEditModal();
-                    alert('菜品修改成功！');
-                } else {
-                    alert('保存失败，请重试');
-                    return;
-                }
-            }
-            
-            renderAll();
-            renderManageDishes();
-        }
-
-        function closeEditModal() {
-            document.getElementById('editModal').classList.remove('active');
-            currentEditingDish = null;
-            tempDishIngredients = [];
-            
-            // 清空编辑表单
-            document.getElementById('editDishName').value = '';
-            document.getElementById('editDishDescription').value = '';
-            document.getElementById('editIngName').value = '';
-            document.getElementById('editIngQuantity').value = '';
-            renderEditIngredients();
-        }
-
-        // 删除菜品功能
-        function confirmDeleteDish(dishId, dishName) {
-            currentDeletingDish = dishId;
-            document.getElementById('deleteDishName').textContent = dishName;
-            document.getElementById('deleteModal').classList.add('active');
-        }
-
-        function deleteDish() {
-            if (!currentDeletingDish) return;
-
-            // 判断是否为系统预置菜品
-            const isDefaultDish = currentDeletingDish.startsWith('default_');
-            
-            if (isDefaultDish) {
-                // 如果是系统预置菜品，标记为已删除
-                if (!deletedDefaultDishes.includes(currentDeletingDish)) {
-                    deletedDefaultDishes.push(currentDeletingDish);
-                }
-                alert('系统预置菜品删除成功！');
-            } else {
-                // 如果是自定义菜品，从数组中移除
-                customDishes = customDishes.filter(d => d.id !== currentDeletingDish && d.name !== currentDeletingDish);
-                alert('自定义菜品删除成功！');
-            }
-            
-            saveData();
-            closeDeleteModal();
-            renderAll();
-            renderManageDishes();
-        }
-
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.remove('active');
-            currentDeletingDish = null;
-        }
-
-        // AI功能
-        async function askAI() {
-            const provider = document.getElementById('aiProvider').value;
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const prompt = document.getElementById('aiPrompt').value.trim();
-
-            if (!apiKey) {
-                alert('请先输入API密钥');
-                return;
-            }
-
-            if (!prompt) {
-                alert('请输入你的问题');
-                return;
-            }
-
-            const askButton = document.getElementById('askAI');
-            const aiIcon = document.getElementById('aiIcon');
-            const resultDiv = document.getElementById('aiResult');
-
-            askButton.disabled = true;
-            aiIcon.innerHTML = '⏳';
-            resultDiv.style.display = 'block';
-            resultDiv.textContent = '正在思考中...';
-
-            try {
-                const ingredientsInfo = ingredients.map(ing => `${ing.name}(${ing.quantity}${ing.unit})`).join('、');
-                const fullPrompt = `我的冰箱里现有食材：${ingredientsInfo || '暂无'}
-
-用户问题：${prompt}
-
-请根据用户问题给出实用的菜品建议，再结合用户已有的食材给到采购建议。如果是询问菜品制作方法，请给出详细步骤。`;
-
-                let response;
-                if (provider === 'deepseek') {
-                    response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${apiKey}`
-                        },
-                        body: JSON.stringify({
-                            model: 'deepseek-chat',
-                            messages: [
-                                {
-                                    role: 'system',
-                                    content: '你是一个专业的烹饪助手，擅长根据用户问题推荐菜品并根据用户已有食材给到采购建议同时提供详细的制作方法。'
-                                },
-                                {
-                                    role: 'user',
-                                    content: fullPrompt
-                                }
-                            ],
-                            max_tokens: 2200,
-                            temperature: 0.7
-                        })
-                    });
-                } else {
-                    response = await fetch('https://api.openai.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${apiKey}`
-                        },
-                        body: JSON.stringify({
-                            model: 'gpt-3.5-turbo',
-                            messages: [
-                                {
-                                    role: 'system',
-                                    content: '你是一个专业的烹饪助手，擅长根据现有食材推荐菜品和提供详细的制作方法。请用中文回答。'
-                                },
-                                {
-                                    role: 'user',
-                                    content: fullPrompt
-                                }
-                            ],
-                            max_tokens: 1500,
-                            temperature: 0.7
-                        })
-                    });
-                }
-
-                if (!response.ok) {
-                    throw new Error(`API请求失败: ${response.status}`);
-                }
-
-                const data = await response.json();
-                const aiResponse = data.choices[0].message.content;
-
-                resultDiv.textContent = aiResponse;
-
-                localStorage.setItem('aiApiKey', apiKey);
-                localStorage.setItem('aiProvider', provider);
-
-            } catch (error) {
-                console.error('AI请求失败:', error);
-                resultDiv.textContent = `请求失败: ${error.message}\n\n请检查：\n1. API密钥是否正确\n2. 网络连接是否正常\n3. API服务是否可用`;
-            } finally {
-                askButton.disabled = false;
-                aiIcon.innerHTML = '🤖';
-            }
-        }
-
-        // 加载保存的AI设置
-        function loadAISettings() {
-            const savedApiKey = localStorage.getItem('aiApiKey');
-            const savedProvider = localStorage.getItem('aiProvider');
-            
-            if (savedApiKey) {
-                document.getElementById('apiKey').value = savedApiKey;
-            }
-            if (savedProvider) {
-                document.getElementById('aiProvider').value = savedProvider;
-            }
-        }
-
-        // 初始化应用
-        function initApp() {
-            console.log('智能冰箱管理系统初始化...');
-            
-            // 初始化PWA功能
-            initPWA();
-            registerServiceWorker();
-            requestNotificationPermission();
-            
-            // 初始化摄像头功能
-            initCamera();
-            
-            // 加载AI设置
-            loadAISettings();
-            
-            // 事件监听
-            document.getElementById('addBtn').addEventListener('click', addIngredient);
-            document.getElementById('clearBtn').addEventListener('click', clearAllIngredients);
-            document.getElementById('addIngredientToDish').addEventListener('click', addIngredientToDish);
-            document.getElementById('saveDishBtn').addEventListener('click', saveDish);
-            document.getElementById('addEditIngredient').addEventListener('click', addEditIngredient);
-            document.getElementById('saveEditBtn').addEventListener('click', saveEdit);
-            document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
-            document.getElementById('confirmDeleteBtn').addEventListener('click', deleteDish);
-            document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
-            document.getElementById('askAI').addEventListener('click', askAI);
-
-            // 模态框点击外部关闭
-            document.getElementById('editModal').addEventListener('click', (e) => {
-                if (e.target === document.getElementById('editModal')) {
-                    closeEditModal();
-                }
-            });
-
-            document.getElementById('deleteModal').addEventListener('click', (e) => {
-                if (e.target === document.getElementById('deleteModal')) {
-                    closeDeleteModal();
-                }
-            });
-
-            // 回车键添加食材
-            ['ingredientName', 'ingredientQuantity'].forEach(id => {
-                document.getElementById(id).addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        addIngredient();
-                    }
-                });
-            });
-
-            // 新菜品食材回车键
-            ['newIngName', 'newIngQuantity'].forEach(id => {
-                document.getElementById(id).addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        addIngredientToDish();
-                    }
-                });
-            });
-
-            // 编辑菜品食材回车键
-            ['editIngName', 'editIngQuantity'].forEach(id => {
-                document.getElementById(id).addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        addEditIngredient();
-                    }
-                });
-            });
-
-            // AI提示框回车键
-            document.getElementById('aiPrompt').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && e.ctrlKey) {
-                    askAI();
-                }
-            });
-            
-            // 渲染界面
-            setTimeout(() => {
-                renderAll();
-                renderManageDishes();
-            }, 100);
-
-            console.log('智能冰箱管理系统初始化完成！');
-        }
-
-        // 页面加载完成后初始化
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initApp);
-        } else {
-            initApp();
-        }
-
-        // 处理页面可见性变化
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                // 页面变为可见时刷新数据
-                renderAll();
-            }
-        });
-
-        // 处理在线/离线状态
-        window.addEventListener('online', () => {
-            console.log('网络已连接');
-            showNotification('网络状态', '已连接到网络');
-        });
-
-        window.addEventListener('offline', () => {
-            console.log('网络已断开');
-            showNotification('网络状态', '网络连接已断开，应用将继续在离线模式下工作');
-        });
-
-        // 导出函数到全局作用域（用于HTML中的onclick）
-        window.switchTab = switchTab;
-        window.removeIngredient = removeIngredient;
-        window.cookDish = cookDish;
-        window.addMissingToShopping = addMissingToShopping;
-        window.clearCookingHistory = clearCookingHistory;
-        window.editDish = editDish;
-        window.confirmDeleteDish = confirmDeleteDish;
-        window.removeTempIngredient = removeTempIngredient;
-        window.adjustIngredientQuantity = adjustIngredientQuantity;
-    </script>
-</body>
-</html><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智能冰箱管理系统</title>
-    
-    <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3b82f6">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="智能冰箱">
-    <meta name="description" content="管理您的食材库存，获取智能菜品推荐和AI烹饪建议">
-    
-    <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" sizes="180x180" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDE4MCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiByeD0iNDAiIGZpbGw9IiMzYjgyZjYiLz4KPHRleHQgeD0iOTAiIHk9IjEwNSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjcwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+OiDwvdGV4dD4KPC9zdmc+">
-    
+
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-            min-height: 100vh;
-            padding: 10px;
-        }
-
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            padding: 0 10px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 15px;
-            padding: 10px 0;
-        }
-
-        .header h1 {
-            color: #1f2937;
-            font-size: 1.8rem;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .header p {
-            color: #6b7280;
-            font-size: 0.85rem;
-        }
-
-        /* PWA安装提示样式 */
-        .install-prompt {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #3b82f6, #1e40af);
-            color: white;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            display: none;
-            align-items: center;
-            gap: 12px;
-            z-index: 1000;
-            animation: slideUp 0.3s ease-out;
-        }
-
-        .install-prompt.show {
-            display: flex;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .install-prompt .install-icon {
-            font-size: 24px;
-            flex-shrink: 0;
-        }
-
-        .install-prompt .install-content {
-            flex: 1;
-        }
-
-        .install-prompt .install-title {
-            font-weight: 600;
-            font-size: 1rem;
-            margin-bottom: 4px;
-        }
-
-        .install-prompt .install-text {
-            font-size: 0.85rem;
-            opacity: 0.9;
-        }
-
-        .install-prompt .install-buttons {
-            display: flex;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-
-        .install-prompt button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .install-prompt .btn-install {
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); min-height: 100vh; padding: 10px; }
+        .container { max-width: 100%; margin: 0 auto; padding: 0 10px; }
+        .header { text-align: center; margin-bottom: 15px; padding: 10px 0; }
+        .header h1 { color: #1f2937; font-size: 1.8rem; margin-bottom: 5px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .header p { color: #6b7280; font-size: 0.85rem; }
+        .install-prompt { position: fixed; bottom: 20px; left: 20px; right: 20px; background: linear-gradient(135deg, #3b82f6, #1e40af); color: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; align-items: center; gap: 12px; z-index: 1000; animation: slideUp 0.3s ease-out; }
+        .install-prompt.show { display: flex; }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .camera-section { margin-bottom: 15px; }
+        .camera-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2); }
+        .camera-btn:hover { background: linear-gradient(135deg, #059669, #047857); transform: translateY(-1px); box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3); }
+        .camera-input { display: none; }
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; }
+        .loading-overlay.show { display: flex; }
+        .loading-content { background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 280px; width: 90%; }
+        .loading-spinner { width: 40px; height: 40px; border: 4px solid #f3f4f6; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .tabs { display: flex; background: white; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); margin-bottom: 15px; overflow: hidden; }
+        .tab-button { flex: 1; padding: 12px 8px; border: none; background: transparent; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #6b7280; transition: all 0.2s; }
+        .tab-button.active { background: #3b82f6; color: white; }
+        .tab-content { display: none; min-height: calc(100vh - 160px); }
+        .tab-content.active { display: block; }
+        .main-grid { display: grid; grid-template-columns: 1fr; gap: 15px; min-height: calc(100vh - 180px); }
+        @media (min-width: 768px) { .main-grid { grid-template-columns: 1fr 2fr; } }
+        .card { background: white; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); padding: 16px; height: fit-content; }
+        .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .card-title { font-size: 1.1rem; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 6px; }
+        .form-group { background: #f9fafb; padding: 12px; border-radius: 6px; margin-bottom: 10px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+        .input, .select, .textarea { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.8rem; width: 100%; }
+        .textarea { resize: vertical; min-height: 60px; }
+        .input:focus, .select:focus, .textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 3px; transition: all 0.2s; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover:not(:disabled) { background: #2563eb; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-success { background: #059669; color: white; }
+        .btn-danger { background: #ef4444; color: white; font-size: 0.75rem; padding: 4px 8px; }
+        .btn-clear { background: transparent; color: #ef4444; border: 1px solid #ef4444; font-size: 0.75rem; padding: 4px 8px; }
+        .btn-cook { background: #10b981; color: white; font-size: 0.75rem; padding: 6px 12px; }
+        .btn-shopping { background: #f59e0b; color: white; font-size: 0.75rem; padding: 6px 12px; }
+        .ingredient-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: white; border-radius: 6px; margin-bottom: 4px; border: 1px solid #e5e7eb; transition: all 0.2s; }
+        .dish-item { display: flex; align-items: stretch; justify-content: space-between; padding: 12px; background: #f9fafb; border-radius: 6px; margin-bottom: 6px; border: 2px solid; flex-direction: column; }
+        .dish-available { background: #f0fdf4; border-color: #bbf7d0; }
+        .dish-missing { background: #fff7ed; border-color: #fed7aa; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 15px; }
+        .stat-card { background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); padding: 12px; text-align: center; }
+        .stat-number { font-size: 1.3rem; font-weight: bold; margin-bottom: 2px; }
+        .stat-label { color: #6b7280; font-size: 0.8rem; }
+        .empty-message { text-align: center; color: #6b7280; padding: 15px; font-size: 0.8rem; }
+        .ai-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; padding: 16px; margin-bottom: 15px; min-height: calc(100vh - 200px); }
+        .ai-config { background: rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+        .ai-config label { display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9rem; }
+        .ai-config .input, .ai-config .select { background: rgba(255, 255, 255, 0.9); color: #1f2937; }
+        .ai-result { background: rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 12px; margin-top: 12px; white-space: pre-wrap; line-height: 1.6; max-height: calc(100vh - 400px); overflow-y: auto; min-height: 200px; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; padding: 20px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .recognition-result { background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-top: 15px; display: none; }
+        .recognition-result.show { display: block; }
+        .recognized-items { display: flex; flex-wrap: wrap; gap: 6px; }
+        .recognized-item { background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid #bbf7d0; }
+        .calendar-day {
             background: white;
-            color: #3b82f6;
-        }
-
-        .install-prompt .btn-install:hover {
-            background: #f3f4f6;
-        }
-
-        .install-prompt .btn-dismiss {
-            background: rgba(255,255,255,0.2);
-            color: white;
-        }
-
-        .install-prompt .btn-dismiss:hover {
-            background: rgba(255,255,255,0.3);
-        }
-
-        /* 摄像头按钮样式 */
-        .camera-section {
-            margin-bottom: 15px;
-        }
-
-        .camera-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            border: none;
+            border: 2px solid #e5e7eb;
             border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
-        }
-
-        .camera-btn:hover {
-            background: linear-gradient(135deg, #059669, #047857);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
-        }
-
-        .camera-btn:active {
-            transform: translateY(0);
-        }
-
-        .camera-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .camera-input {
-            display: none;
-        }
-
-        /* 图片识别结果样式 */
-        .recognition-result {
-            background: #f0fdf4;
-            border: 2px solid #bbf7d0;
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 15px;
-            display: none;
-        }
-
-        .recognition-result.show {
-            display: block;
-        }
-
-        .recognition-result h4 {
-            color: #059669;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .recognized-items {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
-        .recognized-item {
-            background: #dcfce7;
-            color: #166534;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            border: 1px solid #bbf7d0;
-        }
-
-        /* 加载状态样式 */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-
-        .loading-overlay.show {
-            display: flex;
-        }
-
-        .loading-content {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            text-align: center;
-            max-width: 280px;
-            width: 90%;
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f4f6;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            color: #374151;
-            font-weight: 500;
-        }
-
-        /* 移动端优化 */
-        @media (max-width: 768px) {
-            .install-prompt {
-                bottom: 10px;
-                left: 10px;
-                right: 10px;
-                padding: 12px;
-            }
-
-            .install-prompt .install-buttons {
-                flex-direction: column;
-                gap: 6px;
-            }
-
-            .install-prompt button {
-                padding: 10px;
-                width: 100%;
-            }
-        }
-
-        /* 原有样式保持不变 */
-        .tabs {
-            display: flex;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin-bottom: 15px;
-            overflow: hidden;
-        }
-
-        .tab-button {
-            flex: 1;
-            padding: 12px 8px;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #6b7280;
-            transition: all 0.2s;
-        }
-
-        .tab-button.active {
-            background: #3b82f6;
-            color: white;
-        }
-
-        .tab-content {
-            display: none;
-            min-height: calc(100vh - 160px);
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
-            min-height: calc(100vh - 180px);
-        }
-
-        @media (min-width: 768px) {
-            .main-grid {
-                grid-template-columns: 1fr 2fr;
-            }
-        }
-
-        @media (min-width: 1200px) {
-            .main-grid {
-                grid-template-columns: 350px 1fr;
-            }
-        }
-
-        .card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-            padding: 16px;
-            height: fit-content;
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
-
-        .card-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #1f2937;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .form-group {
-            background: #f9fafb;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            margin-bottom: 6px;
-        }
-
-        .form-row-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 6px;
-        }
-
-        .input, .select, .textarea {
-            padding: 6px 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            width: 100%;
-        }
-
-        .textarea {
-            resize: vertical;
-            min-height: 60px;
-        }
-
-        .input:focus, .select:focus, .textarea:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-        }
-
-        .btn {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 3px;
-            transition: all 0.2s;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn-primary {
-            background: #3b82f6;
-            color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            background: #2563eb;
-        }
-
-        .btn-secondary {
-            background: #6b7280;
-            color: white;
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-            background: #4b5563;
-        }
-
-        .btn-success {
-            background: #059669;
-            color: white;
-        }
-
-        .btn-success:hover:not(:disabled) {
-            background: #047857;
-        }
-
-        .btn-danger {
-            background: #ef4444;
-            color: white;
-            font-size: 0.75rem;
-            padding: 4px 8px;
-        }
-
-        .btn-danger:hover:not(:disabled) {
-            background: #dc2626;
-        }
-
-        .btn-clear {
-            background: transparent;
-            color: #ef4444;
-            border: 1px solid #ef4444;
-            font-size: 0.75rem;
-            padding: 4px 8px;
-        }
-
-        .btn-cook {
-            background: #10b981;
-            color: white;
-            font-size: 0.75rem;
-            padding: 6px 12px;
-        }
-
-        .btn-cook:hover:not(:disabled) {
-            background: #059669;
-        }
-
-        .btn-shopping {
-            background: #f59e0b;
-            color: white;
-            font-size: 0.75rem;
-            padding: 6px 12px;
-        }
-
-        .btn-shopping:hover:not(:disabled) {
-            background: #d97706;
-        }
-
-        .ingredient-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 10px;
-            background: white;
-            border-radius: 6px;
-            margin-bottom: 4px;
-            border: 1px solid #e5e7eb;
-            transition: all 0.2s;
-        }
-
-        .ingredient-item:hover {
-            background: #f8fafc;
-            border-color: #3b82f6;
-        }
-
-        .dish-item {
-            display: flex;
-            align-items: stretch;
-            justify-content: space-between;
-            padding: 12px;
-            background: #f9fafb;
-            border-radius: 6px;
-            margin-bottom: 6px;
-            border: 2px solid;
-            flex-direction: column;
-        }
-
-        .dish-available {
-            background: #f0fdf4;
-            border-color: #bbf7d0;
-        }
-
-        .dish-missing {
-            background: #fff7ed;
-            border-color: #fed7aa;
-        }
-
-        .ingredient-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-            min-width: 0;
-        }
-
-        .ingredient-name {
-            font-weight: 500;
-            flex-shrink: 0;
-        }
-
-        .ingredient-quantity {
-            color: #6b7280;
-            font-size: 0.875rem;
-            flex-shrink: 0;
-        }
-
-        .dish-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-
-        .dish-name {
-            font-weight: 600;
-            font-size: 1rem;
-            flex: 1;
-        }
-
-        .dish-status {
-            padding: 4px 12px;
-            border-radius: 16px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            white-space: nowrap;
-            margin-left: 8px;
-        }
-
-        .status-available {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .status-missing {
-            background: #fed7aa;
-            color: #9a3412;
-        }
-
-        .dish-ingredients {
-            font-size: 0.875rem;
-            color: #6b7280;
-            margin-bottom: 8px;
-        }
-
-        .dish-description {
-            font-size: 0.875rem;
-            color: #374151;
-            background: #f8fafc;
             padding: 8px;
-            border-radius: 4px;
-            margin: 8px 0;
-            border-left: 3px solid #3b82f6;
-            white-space: pre-line;
-        }
-
-        .dish-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-            flex-wrap: wrap;
-        }
-
-        .shopping-list {
-            background: white;
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid #fed7aa;
-            margin-top: 8px;
-        }
-
-        .shopping-title {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 8px;
-            color: #9a3412;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        .shopping-item {
-            display: inline-block;
-            background: #fed7aa;
-            color: #9a3412;
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin: 2px;
-            font-size: 0.75rem;
-        }
-
-        .ai-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 10px;
-            padding: 16px;
-            margin-bottom: 15px;
-            min-height: calc(100vh - 200px);
-        }
-
-        .ai-config {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 12px;
-        }
-
-        .ai-config label {
-            display: block;
-            margin-bottom: 4px;
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-
-        .ai-config .input, .ai-config .select {
-            background: rgba(255, 255, 255, 0.9);
-            color: #1f2937;
-        }
-
-        .ai-result {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            padding: 12px;
-            margin-top: 12px;
-            white-space: pre-wrap;
-            line-height: 1.6;
-            max-height: calc(100vh - 400px);
-            overflow-y: auto;
-            min-height: 200px;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-top: 15px;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            padding: 12px;
             text-align: center;
-        }
-
-        .stat-number {
-            font-size: 1.3rem;
-            font-weight: bold;
-            margin-bottom: 2px;
-        }
-
-        .stat-label {
-            color: #6b7280;
-            font-size: 0.8rem;
-        }
-
-        .empty-message {
-            text-align: center;
-            color: #6b7280;
-            padding: 15px;
-            font-size: 0.8rem;
-        }
-
-        .loading {
-            display: inline-block;
-            animation: spin 1s linear infinite;
-        }
-
-        .history-item {
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 80px;
             display: flex;
+            flex-direction: column;
             justify-content: space-between;
-            align-items: center;
-            padding: 8px 10px;
+        }
+
+        .calendar-day:hover {
+            border-color: #3b82f6;
             background: #f0f9ff;
-            border-radius: 4px;
-            margin-bottom: 4px;
-            border-left: 3px solid #3b82f6;
-            font-size: 0.85rem;
         }
 
-        .history-dish {
-            font-weight: 500;
-            color: #1f2937;
+        .calendar-day.selected {
+            border-color: #3b82f6;
+            background: #dbeafe;
         }
 
-        .history-time {
-            color: #6b7280;
-            font-size: 0.75rem;
-        }
-
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .dish-type-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            margin-top: 8px;
-        }
-
-        .badge-default {
-            background: #e0e7ff;
-            color: #3730a3;
-        }
-
-        .badge-custom {
+        .calendar-day.today {
             background: #fef3c7;
+            border-color: #f59e0b;
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .calendar-date {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+
+        .calendar-weekday {
+            font-size: 0.7rem;
+            color: #6b7280;
+            margin-bottom: 6px;
+        }
+
+        .calendar-dishes {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .calendar-dish {
+            background: #3b82f6;
+            color: white;
+            font-size: 0.6rem;
+            padding: 2px 4px;
+            border-radius: 3px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .shopping-need {
+            display: inline-block;
+            background: #fbbf24;
             color: #92400e;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            margin: 2px;
+        }
+
+        .prep-need {
+            display: inline-block;
+            background: #a78bfa;
+            color: #5b21b6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            margin: 2px;
         }
 
         @media (max-width: 767px) {
-            .form-row {
-                grid-template-columns: 1fr;
-                gap: 8px;
+            .calendar-day {
+                min-height: 60px;
+                padding: 6px;
             }
             
-            .ingredient-item {
-                flex-direction: column;
-                gap: 10px;
-                align-items: stretch;
+            .calendar-date {
+                font-size: 0.8rem;
             }
             
-            .dish-actions {
-                justify-content: center;
+            .calendar-dish {
+                font-size: 0.55rem;
             }
         }
     </style>
 </head>
 <body>
-    <!-- PWA安装提示 -->
     <div id="installPrompt" class="install-prompt">
-        <div class="install-icon">📱</div>
-        <div class="install-content">
-            <div class="install-title">安装到桌面</div>
-            <div class="install-text">添加到主屏幕，获得更好的使用体验</div>
+        <div style="font-size: 24px;">📱</div>
+        <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 1rem; margin-bottom: 4px;">安装到桌面</div>
+            <div style="font-size: 0.85rem; opacity: 0.9;">添加到主屏幕，获得更好的使用体验</div>
         </div>
-        <div class="install-buttons">
-            <button id="installBtn" class="btn-install">安装</button>
-            <button id="dismissBtn" class="btn-dismiss">稍后</button>
+        <div style="display: flex; gap: 8px;">
+            <button id="installBtn" style="padding: 8px 16px; border: none; border-radius: 6px; background: white; color: #3b82f6; font-weight: 500; cursor: pointer;">安装</button>
+            <button id="dismissBtn" style="padding: 8px 16px; border: none; border-radius: 6px; background: rgba(255,255,255,0.2); color: white; font-weight: 500; cursor: pointer;">稍后</button>
         </div>
     </div>
 
-    <!-- 加载遮罩 -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
             <div class="loading-spinner"></div>
-            <div id="loadingText" class="loading-text">处理中...</div>
+            <div id="loadingText">处理中...</div>
         </div>
     </div>
 
     <div class="container">
         <div class="header">
-            <h1>
-                🧊 智能冰箱管理系统
-            </h1>
+            <h1>🧊 智能冰箱管理系统</h1>
             <p>管理您的食材库存，获取智能菜品推荐和AI烹饪建议</p>
         </div>
 
         <div class="tabs">
-            <button class="tab-button active" onclick="switchTab('ingredients')">🥬 食材管理</button>
+            <button class="tab-button active" onclick="switchTab('menu')">📅 本周菜单</button>
+            <button class="tab-button" onclick="switchTab('ingredients')">🥬 食材管理</button>
             <button class="tab-button" onclick="switchTab('manage')">📋 菜品库管理</button>
             <button class="tab-button" onclick="switchTab('ai')">🤖 AI助手</button>
         </div>
 
-        <!-- 食材管理标签页 -->
-        <div id="ingredients-tab" class="tab-content active">
-            <div class="main-grid" style="height: calc(100vh - 160px);">
-                <div class="card" style="height: 100%; display: flex; flex-direction: column;">
+        <!-- 本周菜单标签页 -->
+        <div id="menu-tab" class="tab-content active">
+            <div class="main-grid">
+                <!-- 今日信息面板 -->
+                <div class="card" style="display: flex; flex-direction: column;">
                     <div class="card-header">
-                        <h2 class="card-title">
-                            ➕ 食材库存管理
-                        </h2>
+                        <h2 class="card-title">📋 今日信息</h2>
+                        <div id="currentDate" style="font-size: 0.85rem; color: #6b7280;"></div>
+                    </div>
+
+                    <!-- 当天菜单 -->
+                    <div style="margin-bottom: 15px;">
+                        <h3 style="font-size: 1rem; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                            🍽️ 当天菜单
+                        </h3>
+                        <div id="todayMenu" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px; min-height: 50px;">
+                            <div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #059669;">暂无菜品安排</div>
+                        </div>
+                    </div>
+
+                    <!-- 当天采购 -->
+                    <div style="margin-bottom: 15px;">
+                        <h3 style="font-size: 1rem; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                            🛒 当天采购菜品
+                        </h3>
+                        <div id="todayShopping" style="background: #fef3c7; border: 1px solid #fde047; border-radius: 6px; padding: 10px; min-height: 50px;">
+                            <div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #92400e;">无需采购</div>
+                        </div>
+                    </div>
+
+                    <!-- 明天准备 -->
+                    <div>
+                        <h3 style="font-size: 1rem; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                            📦 明天菜品准备
+                        </h3>
+                        <div id="tomorrowPrep" style="background: #ede9fe; border: 1px solid #c4b5fd; border-radius: 6px; padding: 10px; min-height: 50px;">
+                            <div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #7c3aed;">暂无安排</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 本周日历 -->
+                <div class="card" style="display: flex; flex-direction: column;">
+                    <div class="card-header">
+                        <h2 class="card-title">📅 本周菜单规划</h2>
+                        <div style="display: flex; gap: 8px;">
+                            <button id="prevWeekBtn" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 8px;">◀ 上周</button>
+                            <button id="nextWeekBtn" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 8px;">下周 ▶</button>
+                        </div>
+                    </div>
+
+                    <div id="weekCalendar" style="flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 15px;">
+                        <!-- 日历将在这里动态生成 -->
+                    </div>
+
+                    <!-- 快速添加菜品 -->
+                    <div style="background: #f8fafc; border-radius: 6px; padding: 12px; margin-top: 10px;">
+                        <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: #374151;">快速添加到选中日期</h4>
+                        <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                            <select id="quickDishSelect" class="select" style="flex: 1;">
+                                <option value="">选择菜品...</option>
+                            </select>
+                            <button id="quickAddBtn" class="btn btn-primary" style="padding: 6px 12px;">➕ 添加</button>
+                        </div>
+                        <div id="selectedDateInfo" style="font-size: 0.8rem; color: #6b7280;">请先选择日期</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="ingredients-tab" class="tab-content">
+            <div class="main-grid">
+                <div class="card" style="display: flex; flex-direction: column; height: 100%;">
+                    <div class="card-header">
+                        <h2 class="card-title">➕ 食材库存管理</h2>
                         <button id="clearBtn" class="btn btn-clear" style="display: none;">清空</button>
                     </div>
 
-                    <!-- 摄像头功能区 -->
                     <div class="camera-section">
-                        <button id="cameraBtn" class="camera-btn">
-                            📷 拍照识别食材
-                        </button>
+                        <button id="cameraBtn" class="camera-btn">📷 拍照识别食材</button>
                         <input type="file" id="cameraInput" class="camera-input" accept="image/*" capture="camera">
                     </div>
 
-                    <!-- 图片识别结果 -->
                     <div id="recognitionResult" class="recognition-result">
-                        <h4>🎯 识别结果</h4>
+                        <h4 style="color: #059669; margin-bottom: 8px;">🎯 识别结果</h4>
                         <div id="recognizedItems" class="recognized-items"></div>
                     </div>
 
-                    <div class="form-group" style="flex-shrink: 0;">
+                    <div class="form-group">
                         <div class="form-row">
                             <input type="text" id="ingredientName" class="input" placeholder="食材名称">
                             <select id="ingredientType" class="select">
@@ -1685,21 +322,18 @@
                                 <option value="根">根</option>
                                 <option value="片">片</option>
                             </select>
-                            <button id="addBtn" class="btn btn-primary">
-                                ➕ 添加
-                            </button>
+                            <button id="addBtn" class="btn btn-primary">➕ 添加</button>
                         </div>
                     </div>
 
-                    <div id="ingredientList" style="flex: 1; overflow-y: auto; background: #fafafa; border-radius: 6px; padding: 8px; border: 1px solid #e5e7eb; margin-bottom: 10px; max-height: 280px;">
+                    <div id="ingredientList" style="flex: 1; overflow-y: auto; background: #fafafa; border-radius: 6px; padding: 8px; border: 1px solid #e5e7eb; margin-bottom: 10px;">
                         <div class="empty-message">暂无食材，请添加食材到库存</div>
                     </div>
 
-                    <div class="stats" style="margin-top: 0; flex-shrink: 0;">
+                    <div class="stats">
                         <div class="stat-card">
                             <div id="statIngredients" class="stat-number" style="color: #3b82f6;">0</div>
                             <div class="stat-label">库存总数</div>
-                            <div id="categoryBreakdown" style="font-size: 0.7rem; color: #6b7280; margin-top: 4px;"></div>
                         </div>
                         <div class="stat-card">
                             <div id="statAvailable" class="stat-number" style="color: #059669;">0</div>
@@ -1710,24 +344,10 @@
                             <div class="stat-label">需补充</div>
                         </div>
                     </div>
-
-                    <!-- 制作历史 -->
-                    <div id="cookingHistorySection" style="margin-top: 10px; flex-shrink: 0;">
-                        <h3 style="font-size: 0.9rem; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
-                            📋 制作历史
-                            <button id="clearHistoryBtn" class="btn btn-clear" style="font-size: 0.7rem; padding: 2px 6px; margin-left: auto;" onclick="clearCookingHistory()">清空</button>
-                        </h3>
-                        <div id="cookingHistoryList" style="max-height: 120px; overflow-y: auto; background: #f8fafc; border-radius: 4px; padding: 8px; border: 1px solid #e5e7eb;">
-                            <div class="empty-message" style="padding: 8px;">暂无制作记录</div>
-                        </div>
-                    </div>
                 </div>
 
-                <div class="card" style="height: 100%; display: flex; flex-direction: column;">
-                    <h2 class="card-title" style="flex-shrink: 0;">
-                        👨‍🍳 智能菜品推荐（全部菜品）
-                    </h2>
-
+                <div class="card" style="display: flex; flex-direction: column; height: 100%;">
+                    <h2 class="card-title">👨‍🍳 智能菜品推荐</h2>
                     <div id="dishList" style="flex: 1; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; background: #fafafa;">
                         <div class="empty-message">正在加载菜品...</div>
                     </div>
@@ -1735,22 +355,17 @@
             </div>
         </div>
 
-        <!-- 菜品库管理标签页 -->
         <div id="manage-tab" class="tab-content">
             <div class="main-grid">
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">
-                            📖 添加新菜品
-                        </h2>
+                        <h2 class="card-title">📖 添加新菜品</h2>
                     </div>
-
                     <div class="form-group">
                         <input type="text" id="newDishName" class="input" placeholder="菜品名称" style="margin-bottom: 8px;">
                         <textarea id="newDishDescription" class="textarea" placeholder="制作方法或描述（可选）"></textarea>
                     </div>
-
-                    <div id="newDishIngredients">
+                    <div>
                         <h3 style="margin-bottom: 10px; font-size: 0.95rem;">所需食材</h3>
                         <div class="form-row-3" style="margin-bottom: 8px;">
                             <input type="text" id="newIngName" class="input" placeholder="食材名称">
@@ -1767,156 +382,58 @@
                                 <option value="片">片</option>
                             </select>
                         </div>
-                        <button id="addIngredientToDish" class="btn btn-secondary" style="margin-bottom: 10px;">
-                            ➕ 添加食材
-                        </button>
+                        <button id="addIngredientToDish" class="btn btn-secondary" style="margin-bottom: 10px;">➕ 添加食材</button>
                         <div id="dishIngredientsList"></div>
                     </div>
-
-                    <button id="saveDishBtn" class="btn btn-success">
-                        💾 保存菜品
-                    </button>
+                    <button id="saveDishBtn" class="btn btn-success">💾 保存菜品</button>
                 </div>
-
-                <div class="card" style="height: calc(100vh - 160px);">
+                <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">
-                            ✏️ 管理菜品库
-                        </h2>
-                        <div style="font-size: 0.75rem; color: #6b7280;">
-                            共 <span id="dishCount">0</span> 个菜品
-                        </div>
+                        <h2 class="card-title">✏️ 管理菜品库</h2>
+                        <div style="font-size: 0.75rem; color: #6b7280;">共 <span id="dishCount">0</span> 个菜品</div>
                     </div>
-                    <div id="manageDishList" style="max-height: calc(100vh - 220px); overflow-y: auto;">
+                    <div id="manageDishList" style="max-height: 400px; overflow-y: auto;">
                         <div class="empty-message">加载中...</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- AI助手标签页 -->
         <div id="ai-tab" class="tab-content">
             <div class="ai-section">
-                <h2 style="margin-bottom: 20px;">
-                    🤖 AI烹饪助手
-                </h2>
-
+                <h2 style="margin-bottom: 20px;">🤖 AI烹饪助手</h2>
                 <div class="ai-config">
                     <label>选择AI服务：</label>
                     <select id="aiProvider" class="select" style="margin-bottom: 10px;">
                         <option value="deepseek">DeepSeek（推荐）</option>
                         <option value="openai">OpenAI ChatGPT</option>
                     </select>
-
                     <label>API密钥：</label>
                     <input type="password" id="apiKey" class="input" placeholder="请输入你的API密钥" style="margin-bottom: 10px;">
-                    
-                    <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 10px;">
-                        💡 DeepSeek API更便宜，ChatGPT更智能。密钥仅本地存储，不会上传。
-                    </div>
+                    <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 10px;">💡 DeepSeek API更便宜，ChatGPT更智能。密钥仅本地存储，不会上传。</div>
                 </div>
-
                 <div class="form-group" style="background: rgba(255,255,255,0.1);">
-                    <textarea id="aiPrompt" class="textarea" placeholder="向AI描述你的需求，例如：
-- 根据我现有的食材推荐几道菜
-- 详细介绍菜品的做法
-- 推荐一些适合减肥的菜品
-- 这些食材搭配有什么营养价值" style="min-height: 100px; background: rgba(255,255,255,0.9); color: #1f2937;"></textarea>
-                    
-                    <button id="askAI" class="btn btn-success" style="margin-top: 10px;">
-                        <span id="aiIcon">🤖</span>
-                        询问AI助手
-                    </button>
+                    <textarea id="aiPrompt" class="textarea" placeholder="向AI描述你的需求，例如：&#10;- 根据我现有的食材推荐几道菜&#10;- 详细介绍菜品的做法&#10;- 推荐一些适合减肥的菜品" style="min-height: 100px; background: rgba(255,255,255,0.9); color: #1f2937;"></textarea>
+                    <button id="askAI" class="btn btn-success" style="margin-top: 10px;"><span id="aiIcon">🤖</span> 询问AI助手</button>
                 </div>
-
                 <div id="aiResult" class="ai-result" style="display: none;"></div>
             </div>
         </div>
     </div>
 
-    <!-- 编辑菜品模态框 -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <h3 style="margin-bottom: 15px; color: #1f2937; font-weight: 600;">编辑菜品</h3>
-            <input type="text" id="editDishName" class="input" placeholder="菜品名称" style="margin-bottom: 8px;">
-            <textarea id="editDishDescription" class="textarea" placeholder="制作方法或描述"></textarea>
-            
-            <div style="margin: 15px 0;">
-                <h4 style="margin-bottom: 10px; color: #374151;">所需食材</h4>
-                <div class="form-row-3" style="margin-bottom: 8px;">
-                    <input type="text" id="editIngName" class="input" placeholder="食材名称">
-                    <input type="number" id="editIngQuantity" class="input" placeholder="数量">
-                    <select id="editIngUnit" class="select">
-                        <option value="份">份</option>
-                        <option value="袋">袋</option>
-                        <option value="盒">盒</option>
-                        <option value="个">个</option>
-                        <option value="颗">颗</option>
-                        <option value="g">g</option>
-                        <option value="块">块</option>
-                        <option value="根">根</option>
-                        <option value="片">片</option>
-                    </select>
-                </div>
-                <button id="addEditIngredient" class="btn btn-secondary" style="margin-bottom: 10px;">
-                    ➕ 添加食材
-                </button>
-                <div id="editIngredientsList"></div>
-            </div>
-
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button id="cancelEditBtn" class="btn btn-secondary">
-                    ✖ 取消
-                </button>
-                <button id="saveEditBtn" class="btn btn-success">
-                    💾 保存修改
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 删除确认模态框 -->
-    <div id="deleteModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
-            <h3 style="margin-bottom: 15px; color: #ef4444; font-weight: 600;">确认删除</h3>
-            <p style="color: #6b7280; margin-bottom: 20px; line-height: 1.5;">
-                确定要删除菜品 "<span id="deleteDishName" style="font-weight: 600; color: #1f2937;"></span>" 吗？
-            </p>
-            <p style="color: #ef4444; font-size: 0.9rem; margin-bottom: 20px;">
-                ⚠️ 此操作不可撤销
-            </p>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button id="cancelDeleteBtn" class="btn btn-secondary">
-                    取消
-                </button>
-                <button id="confirmDeleteBtn" class="btn btn-danger">
-                    🗑️ 确认删除
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // 应用状态
         let ingredients = JSON.parse(localStorage.getItem('fridgeIngredients') || '[]');
         let customDishes = JSON.parse(localStorage.getItem('customDishes') || '[]');
-        let cookingHistory = JSON.parse(localStorage.getItem('cookingHistory') || '[]');
-        let deletedDefaultDishes = JSON.parse(localStorage.getItem('deletedDefaultDishes') || '[]');
-        let recommendedDishes = [];
-        let currentEditingDish = null;
-        let currentDeletingDish = null;
-        let tempDishIngredients = [];
-
-        // PWA相关变量
+        let weeklyMenu = JSON.parse(localStorage.getItem('weeklyMenu') || '{}');
+        let currentWeekStart = new Date();
+        let selectedDate = null;
         let deferredPrompt;
-        let isInstalled = false;
 
-        // 预定义的菜品数据库
         const defaultDishes = [
             {
                 id: 'default_1',
                 name: '葱油焖鸡',
-                description: '1. 鸡块提前腌制，热锅下油加入葱姜煎出葱油\n2. 倒入鸡块翻炒\n3. 加入调理姜片翻炒均匀出锅',
+                description: '1. 鸡块提前腌制，热锅下油加入葱姜煎出葱油\\n2. 倒入鸡块翻炒\\n3. 加入调理姜片翻炒均匀出锅',
                 ingredients: [
                     { name: '鸡块', quantity: 1, unit: '份' },
                     { name: '姜', quantity: 0.5, unit: '个' },
@@ -1926,154 +443,63 @@
             {
                 id: 'default_2',
                 name: '秋葵炒素肠',
-                description: '1. 秋葵切片清洗\n2. 素肠切片\n3. 热锅炒青椒至变色\n4. 加秋葵素肠炒匀出库',
+                description: '1. 秋葵切片清洗\\n2. 素肠切片\\n3. 热锅炒青椒至变色\\n4. 加秋葵素肠炒匀出库',
                 ingredients: [
                     { name: '秋葵', quantity: 1, unit: '份' },
                     { name: '青椒', quantity: 1, unit: '个' },
                     { name: '素肠', quantity: 0.5, unit: '份' }
                 ]
-            },
-            {
-                id: 'default_3',
-                name: '干锅花菜',
-                description: '1. 花菜切小朵，下锅焯水\n2. 热锅下油，加入辣椒花椒花菜翻炒\n3. 加入调料炒匀即可',
-                ingredients: [
-                    { name: '花菜', quantity: 1, unit: '棵' },
-                    { name: '辣椒', quantity: 0.5, unit: '份' },
-                    { name: '花椒', quantity: 1, unit: '份' }
-                ]
-            },
-            {
-                id: 'default_4',
-                name: '黄焖鸡',
-                description: '1. 热锅下葱姜蒜炒香\n2. 倒入鸡块炒至微黄\n3. 倒入酱汁并加入开水漫过鸡肉\n4. 倒入土豆香菇等配料焖煮30分钟\n5. 汤汁收浓加入青红辣椒洋葱再煮5分钟即可出锅',
-                ingredients: [
-                    { name: '鸡块', quantity: 1, unit: '份' },
-                    { name: '香菇', quantity: 0.5, unit: '份' },    
-                    { name: '土豆', quantity: 1, unit: '个' },
-                    { name: '青红辣椒', quantity: 0.5, unit: '份' },
-                    { name: '洋葱', quantity: 1, unit: '个' },
-                    { name: '姜', quantity: 0.5, unit: '个' },
-                    { name: '葱', quantity: 1, unit: '根' }
-                ]
-            },
-            {
-                id: 'default_5',
-                name: '烤鸡腿',
-                description: '1. 鸡腿提前腌制或者使用预制鸡腿\n2. 烤箱预热\n3. 放入鸡腿烤制18分钟出炉',
-                ingredients: [
-                    { name: '鸡腿', quantity: 3, unit: '根' }
-                ]
             }
         ];
 
-        // PWA安装功能
         function initPWA() {
-            // 检测是否已安装
-            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
-                isInstalled = true;
+            if (window.matchMedia('(display-mode: standalone)').matches) {
                 document.getElementById('installPrompt').style.display = 'none';
             }
-
-            // 监听beforeinstallprompt事件
             window.addEventListener('beforeinstallprompt', (e) => {
-                console.log('PWA: beforeinstallprompt事件触发');
                 e.preventDefault();
                 deferredPrompt = e;
-                showInstallPrompt();
+                document.getElementById('installPrompt').classList.add('show');
             });
-
-            // 监听appinstalled事件
-            window.addEventListener('appinstalled', (e) => {
-                console.log('PWA: 应用已安装');
-                isInstalled = true;
-                hideInstallPrompt();
-                showNotification('应用安装成功！', '欢迎使用智能冰箱管理系统');
-            });
-
-            // 安装按钮事件
-            document.getElementById('installBtn').addEventListener('click', installApp);
-            document.getElementById('dismissBtn').addEventListener('click', hideInstallPrompt);
+            document.getElementById('installBtn').onclick = async () => {
+                if (deferredPrompt) {
+                    await deferredPrompt.prompt();
+                    deferredPrompt = null;
+                    document.getElementById('installPrompt').classList.remove('show');
+                }
+            };
+            document.getElementById('dismissBtn').onclick = () => {
+                document.getElementById('installPrompt').classList.remove('show');
+            };
         }
 
-        function showInstallPrompt() {
-            if (!isInstalled && deferredPrompt) {
-                const prompt = document.getElementById('installPrompt');
-                prompt.classList.add('show');
-            }
-        }
-
-        function hideInstallPrompt() {
-            const prompt = document.getElementById('installPrompt');
-            prompt.classList.remove('show');
-        }
-
-        async function installApp() {
-            if (!deferredPrompt) {
-                console.log('PWA: 没有可用的安装提示');
-                return;
-            }
-
-            const result = await deferredPrompt.prompt();
-            console.log('PWA: 安装提示结果:', result);
-            
-            deferredPrompt = null;
-            hideInstallPrompt();
-        }
-
-        function showNotification(title, body) {
-            if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification(title, { body, icon: './icons/icon-192x192.png' });
-            }
-        }
-
-        // 图片识别功能
         function initCamera() {
-            const cameraBtn = document.getElementById('cameraBtn');
-            const cameraInput = document.getElementById('cameraInput');
-
-            cameraBtn.addEventListener('click', () => {
-                cameraInput.click();
-            });
-
-            cameraInput.addEventListener('change', async (e) => {
+            document.getElementById('cameraBtn').onclick = () => {
+                document.getElementById('cameraInput').click();
+            };
+            document.getElementById('cameraInput').onchange = async (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    await processImage(file);
-                }
-            });
-        }
-
-        async function processImage(file) {
-            showLoading('正在识别图片中的食材...');
-            
-            try {
-                const base64 = await fileToBase64(file);
-                const recognizedItems = await recognizeIngredients(base64);
-                
-                if (recognizedItems && recognizedItems.length > 0) {
-                    displayRecognitionResult(recognizedItems);
-                    
-                    // 询问是否添加识别到的食材
-                    const confirmed = confirm(`识别到 ${recognizedItems.length} 种食材，是否添加到库存？\n\n${recognizedItems.map(item => `${item.name}: ${item.quantity}${item.unit}`).join('\n')}`);
-                    
-                    if (confirmed) {
-                        recognizedItems.forEach(item => {
-                            addIngredientFromRecognition(item);
-                        });
-                        hideRecognitionResult();
-                        renderAll();
-                        showNotification('识别成功', `已添加 ${recognizedItems.length} 种食材到库存`);
+                    showLoading('正在识别图片中的食材...');
+                    try {
+                        const base64 = await fileToBase64(file);
+                        const recognizedItems = await recognizeIngredients(base64);
+                        if (recognizedItems && recognizedItems.length > 0) {
+                            displayRecognitionResult(recognizedItems);
+                            if (confirm(`识别到 ${recognizedItems.length} 种食材，是否添加到库存？`)) {
+                                recognizedItems.forEach(item => addIngredientFromRecognition(item));
+                                renderAll();
+                            }
+                        } else {
+                            alert('未能识别到食材，请尝试重新拍照');
+                        }
+                    } catch (error) {
+                        alert('图片识别失败: ' + error.message);
+                    } finally {
+                        hideLoading();
                     }
-                } else {
-                    alert('未能识别到食材，请尝试重新拍照或手动添加');
                 }
-            } catch (error) {
-                console.error('图片识别失败:', error);
-                alert('图片识别失败: ' + error.message);
-            } finally {
-                hideLoading();
-            }
+            };
         }
 
         function fileToBase64(file) {
@@ -2088,20 +514,9 @@
         async function recognizeIngredients(base64Image) {
             const apiKey = document.getElementById('apiKey').value.trim();
             const provider = document.getElementById('aiProvider').value;
-            
-            if (!apiKey) {
-                throw new Error('请先在AI助手页面配置API密钥');
-            }
+            if (!apiKey) throw new Error('请先在AI助手页面配置API密钥');
 
-            const prompt = `请识别这张图片中的食材。严格按照以下JSON格式返回，不要包含任何其他文字：
-[{"name": "食材名称", "quantity": 数量, "unit": "单位", "type": "类别"}]
-
-要求：
-1. quantity必须是数字
-2. unit只能是: 个、根、片、袋、盒、份、g、颗、块中的一个
-3. type只能是: 蔬菜、肉类、调料、其他中的一个
-4. 如果无法确定数量，默认设为1
-5. 只返回JSON数组，不要任何解释文字`;
+            const prompt = `请识别这张图片中的食材，严格按照JSON格式返回：[{"name": "食材名称", "quantity": 数量, "unit": "单位", "type": "类别"}]`;
 
             let response;
             if (provider === 'deepseek') {
@@ -2113,15 +528,13 @@
                     },
                     body: JSON.stringify({
                         model: 'deepseek-chat',
-                        messages: [
-                            {
-                                role: 'user',
-                                content: [
-                                    { type: 'text', text: prompt },
-                                    { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
-                                ]
-                            }
-                        ],
+                        messages: [{
+                            role: 'user',
+                            content: [
+                                { type: 'text', text: prompt },
+                                { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+                            ]
+                        }],
                         max_tokens: 1000
                     })
                 });
@@ -2134,35 +547,29 @@
                     },
                     body: JSON.stringify({
                         model: 'gpt-4-vision-preview',
-                        messages: [
-                            {
-                                role: 'user',
-                                content: [
-                                    { type: 'text', text: prompt },
-                                    { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
-                                ]
-                            }
-                        ],
+                        messages: [{
+                            role: 'user',
+                            content: [
+                                { type: 'text', text: prompt },
+                                { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+                            ]
+                        }],
                         max_tokens: 1000
                     })
                 });
             }
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`API请求失败: ${response.status} - ${errorData.error?.message || '未知错误'}`);
+                throw new Error(`API请求失败: ${response.status}`);
             }
 
             const data = await response.json();
             const resultText = data.choices[0].message.content.trim();
             
-            // 尝试解析JSON
             try {
-                // 清理可能的markdown格式
-                const cleanedText = resultText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+                const cleanedText = resultText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();
                 return JSON.parse(cleanedText);
             } catch (parseError) {
-                console.error('JSON解析失败:', parseError, '原文:', resultText);
                 throw new Error('AI返回的数据格式不正确，请重试');
             }
         }
@@ -2170,29 +577,17 @@
         function displayRecognitionResult(items) {
             const resultDiv = document.getElementById('recognitionResult');
             const itemsDiv = document.getElementById('recognizedItems');
-            
             itemsDiv.innerHTML = items.map(item => 
                 `<span class="recognized-item">${item.name}: ${item.quantity}${item.unit}</span>`
             ).join('');
-            
             resultDiv.classList.add('show');
-            
-            // 3秒后自动隐藏
-            setTimeout(() => {
-                hideRecognitionResult();
-            }, 5000);
-        }
-
-        function hideRecognitionResult() {
-            document.getElementById('recognitionResult').classList.remove('show');
+            setTimeout(() => resultDiv.classList.remove('show'), 5000);
         }
 
         function addIngredientFromRecognition(item) {
-            // 检查是否已存在相同的食材
             const existingIngredient = ingredients.find(ing => 
                 ing.name === item.name && ing.unit === item.unit
             );
-
             if (existingIngredient) {
                 existingIngredient.quantity += item.quantity;
             } else {
@@ -2206,8 +601,7 @@
             }
         }
 
-        // 加载和显示功能
-        function showLoading(text = '处理中...') {
+        function showLoading(text) {
             document.getElementById('loadingText').textContent = text;
             document.getElementById('loadingOverlay').classList.add('show');
         }
@@ -2216,96 +610,271 @@
             document.getElementById('loadingOverlay').classList.remove('show');
         }
 
-        // Service Worker注册
-        function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', async () => {
-                    try {
-                        const registration = await navigator.serviceWorker.register('./sw.js');
-                        console.log('Service Worker 注册成功:', registration.scope);
-                        
-                        // 监听更新
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // 有新版本可用
-                                    if (confirm('发现新版本，是否立即更新？')) {
-                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
-                                        window.location.reload();
-                                    }
-                                }
-                            });
-                        });
-                    } catch (error) {
-                        console.log('Service Worker 注册失败:', error);
-                    }
-                });
-            }
-        }
-
-        // 请求通知权限
-        function requestNotificationPermission() {
-            if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission().then(permission => {
-                    console.log('通知权限:', permission);
-                });
-            }
-        }
-
-        // 获取所有菜品
-        function getAllDishes() {
-            // 过滤掉被删除的系统预置菜品
-            const activeDefaultDishes = defaultDishes.filter(dish => 
-                !deletedDefaultDishes.includes(dish.id)
-            );
-            return [...activeDefaultDishes, ...customDishes];
-        }
-
-        // 按类别和单位对食材进行分组排序
-        function sortAndGroupIngredients(ingredients) {
-            const typeOrder = { '蔬菜': 1, '肉类': 2, '调料': 3, '其他': 4 };
-            const unitOrder = { '个': 1, 'g': 2, 'kg': 3, '根': 4, '瓣': 5, '块': 6, '勺': 7, '片': 8, '袋': 9, '盒': 10 };
-
-            return ingredients.sort((a, b) => {
-                const typeCompare = typeOrder[a.type] - typeOrder[b.type];
-                if (typeCompare !== 0) return typeCompare;
-                
-                const unitCompare = unitOrder[a.unit] - unitOrder[b.unit];
-                if (unitCompare !== 0) return unitCompare;
-                
-                return a.name.localeCompare(b.name, 'zh-CN');
-            });
-        }
-
-        // 获取分类统计
-        function getCategoryStats(ingredients) {
-            const stats = {};
-            ingredients.forEach(ing => {
-                stats[ing.type] = (stats[ing.type] || 0) + 1;
-            });
-            return stats;
-        }
-
-        // 标签页切换
         function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
             
             if (tabName === 'manage') {
                 renderManageDishes();
+            } else if (tabName === 'menu') {
+                initWeekCalendar();
+                renderMenuInfo();
             }
         }
 
-        // 添加食材
+        // 菜单规划相关函数
+        function initWeekCalendar() {
+            setCurrentWeekStart();
+            renderWeekCalendar();
+            updateQuickDishSelect();
+            updateCurrentDateDisplay();
+        }
+
+        function setCurrentWeekStart() {
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // 周一开始
+            currentWeekStart = new Date(now);
+            currentWeekStart.setDate(now.getDate() + diff);
+            currentWeekStart.setHours(0, 0, 0, 0);
+        }
+
+        function renderWeekCalendar() {
+            const container = document.getElementById('weekCalendar');
+            const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            container.innerHTML = '';
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(currentWeekStart);
+                date.setDate(currentWeekStart.getDate() + i);
+                const dateKey = formatDateKey(date);
+                const dayDishes = weeklyMenu[dateKey] || [];
+
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                if (date.getTime() === today.getTime()) {
+                    dayElement.classList.add('today');
+                }
+                
+                dayElement.onclick = () => selectDate(date, dayElement);
+
+                dayElement.innerHTML = `
+                    <div class="calendar-weekday">${weekdays[i]}</div>
+                    <div class="calendar-date">${date.getDate()}</div>
+                    <div class="calendar-dishes">
+                        ${dayDishes.map(dish => `<div class="calendar-dish" title="${dish}">${dish}</div>`).join('')}
+                    </div>
+                `;
+
+                container.appendChild(dayElement);
+            }
+        }
+
+        function selectDate(date, element) {
+            document.querySelectorAll('.calendar-day').forEach(day => day.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedDate = date;
+            updateSelectedDateInfo();
+        }
+
+        function updateSelectedDateInfo() {
+            const info = document.getElementById('selectedDateInfo');
+            if (selectedDate) {
+                const dateStr = selectedDate.toLocaleDateString('zh-CN', {
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                });
+                info.textContent = `已选择：${dateStr}`;
+            } else {
+                info.textContent = '请先选择日期';
+            }
+        }
+
+        function updateCurrentDateDisplay() {
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+            document.getElementById('currentDate').textContent = dateStr;
+        }
+
+        function updateQuickDishSelect() {
+            const select = document.getElementById('quickDishSelect');
+            const allDishes = getAllDishes();
+            
+            select.innerHTML = '<option value="">选择菜品...</option>';
+            allDishes.forEach(dish => {
+                const option = document.createElement('option');
+                option.value = dish.name;
+                option.textContent = dish.name;
+                select.appendChild(option);
+            });
+        }
+
+        function quickAddDish() {
+            const dishName = document.getElementById('quickDishSelect').value;
+            if (!dishName || !selectedDate) {
+                alert('请选择日期和菜品');
+                return;
+            }
+
+            const dateKey = formatDateKey(selectedDate);
+            if (!weeklyMenu[dateKey]) {
+                weeklyMenu[dateKey] = [];
+            }
+            
+            if (!weeklyMenu[dateKey].includes(dishName)) {
+                weeklyMenu[dateKey].push(dishName);
+                saveMenuData();
+                renderWeekCalendar();
+                renderMenuInfo();
+                alert(`已将"${dishName}"添加到${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日`);
+            } else {
+                alert('该菜品已在当天菜单中');
+            }
+        }
+
+        function renderMenuInfo() {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+
+            renderTodayMenu(today);
+            renderTodayShopping(today);
+            renderTomorrowPrep(tomorrow);
+        }
+
+        function renderTodayMenu(date) {
+            const dateKey = formatDateKey(date);
+            const todayDishes = weeklyMenu[dateKey] || [];
+            const container = document.getElementById('todayMenu');
+
+            if (todayDishes.length === 0) {
+                container.innerHTML = '<div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #059669;">暂无菜品安排</div>';
+            } else {
+                container.innerHTML = todayDishes.map(dishName => {
+                    const dish = getAllDishes().find(d => d.name === dishName);
+                    const canMake = dish ? canMakeDish(dish) : false;
+                    return `
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #bbf7d0;">
+                            <span style="font-weight: 500;">${dishName}</span>
+                            <span style="font-size: 0.75rem; color: ${canMake ? '#059669' : '#dc2626'};">
+                                ${canMake ? '✅ 可制作' : '⚠️ 缺食材'}
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function renderTodayShopping(date) {
+            const dateKey = formatDateKey(date);
+            const todayDishes = weeklyMenu[dateKey] || [];
+            const container = document.getElementById('todayShopping');
+            
+            const allMissingIngredients = [];
+            
+            todayDishes.forEach(dishName => {
+                const dish = getAllDishes().find(d => d.name === dishName);
+                if (dish && !canMakeDish(dish)) {
+                    const missing = getMissingIngredients(dish);
+                    missing.forEach(ing => {
+                        const existing = allMissingIngredients.find(i => i.name === ing.name && i.unit === ing.unit);
+                        if (existing) {
+                            existing.needed += ing.needed;
+                        } else {
+                            allMissingIngredients.push({...ing});
+                        }
+                    });
+                }
+            });
+
+            if (allMissingIngredients.length === 0) {
+                container.innerHTML = '<div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #92400e;">无需采购</div>';
+            } else {
+                container.innerHTML = allMissingIngredients.map(ing => 
+                    `<span class="shopping-need">${ing.name}: ${ing.needed}${ing.unit}</span>`
+                ).join('');
+            }
+        }
+
+        function renderTomorrowPrep(date) {
+            const dateKey = formatDateKey(date);
+            const tomorrowDishes = weeklyMenu[dateKey] || [];
+            const container = document.getElementById('tomorrowPrep');
+            
+            const allMissingIngredients = [];
+            
+            tomorrowDishes.forEach(dishName => {
+                const dish = getAllDishes().find(d => d.name === dishName);
+                if (dish && !canMakeDish(dish)) {
+                    const missing = getMissingIngredients(dish);
+                    missing.forEach(ing => {
+                        const existing = allMissingIngredients.find(i => i.name === ing.name && i.unit === ing.unit);
+                        if (existing) {
+                            existing.needed += ing.needed;
+                        } else {
+                            allMissingIngredients.push({...ing});
+                        }
+                    });
+                }
+            });
+
+            if (allMissingIngredients.length === 0) {
+                if (tomorrowDishes.length === 0) {
+                    container.innerHTML = '<div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #7c3aed;">暂无安排</div>';
+                } else {
+                    container.innerHTML = '<div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #7c3aed;">✅ 食材充足，无需准备</div>';
+                }
+            } else {
+                container.innerHTML = allMissingIngredients.map(ing => 
+                    `<span class="prep-need">${ing.name}: ${ing.needed}${ing.unit}</span>`
+                ).join('');
+            }
+        }
+
+        function getMissingIngredients(dish) {
+            return dish.ingredients.filter(required => {
+                const available = ingredients.find(ing => 
+                    ing.name === required.name && ing.unit === required.unit
+                );
+                return !available || available.quantity < required.quantity;
+            }).map(missing => {
+                const available = ingredients.find(ing => 
+                    ing.name === missing.name && ing.unit === missing.unit
+                );
+                const needed = available ? 
+                    missing.quantity - available.quantity : 
+                    missing.quantity;
+                return { ...missing, needed };
+            });
+        }
+
+        function formatDateKey(date) {
+            return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+        }
+
+        function changeWeek(direction) {
+            const days = direction * 7;
+            currentWeekStart.setDate(currentWeekStart.getDate() + days);
+            selectedDate = null;
+            renderWeekCalendar();
+            updateSelectedDateInfo();
+        }
+
+        function saveMenuData() {
+            localStorage.setItem('weeklyMenu', JSON.stringify(weeklyMenu));
+        }
+
         function addIngredient() {
             const name = document.getElementById('ingredientName').value.trim();
             const type = document.getElementById('ingredientType').value;
@@ -2313,17 +882,9 @@
             const unit = document.getElementById('ingredientUnit').value;
 
             if (name && quantity && quantity > 0) {
-                ingredients.push({
-                    id: Date.now(),
-                    name,
-                    type,
-                    quantity,
-                    unit
-                });
-
+                ingredients.push({ id: Date.now(), name, type, quantity, unit });
                 document.getElementById('ingredientName').value = '';
                 document.getElementById('ingredientQuantity').value = '';
-
                 saveData();
                 renderAll();
             } else {
@@ -2331,7 +892,6 @@
             }
         }
 
-        // 删除食材
         function removeIngredient(id) {
             if (confirm('确定要删除这个食材吗？')) {
                 ingredients = ingredients.filter(ing => ing.id !== id);
@@ -2340,27 +900,23 @@
             }
         }
 
-        // 清空所有食材
-        function clearAllIngredients() {
-            if (confirm('确定要清空所有食材数据吗？')) {
-                ingredients = [];
-                saveData();
-                renderAll();
-            }
+        function canMakeDish(dish) {
+            return dish.ingredients.every(required => {
+                const available = ingredients.find(ing => 
+                    ing.name === required.name && ing.unit === required.unit
+                );
+                return available && available.quantity >= required.quantity;
+            });
         }
 
-        // 制作菜品
         function cookDish(dishName) {
             const dish = getAllDishes().find(d => d.name === dishName);
-            if (!dish) return;
-
-            if (!canMakeDish(dish)) {
+            if (!dish || !canMakeDish(dish)) {
                 alert('食材不足，无法制作此菜品');
                 return;
             }
 
-            if (confirm(`确定要制作 ${dishName} 吗？\n\n将会自动扣减以下食材：\n${dish.ingredients.map(ing => `${ing.name}: ${ing.quantity}${ing.unit}`).join('\n')}`)) {
-                // 扣减食材
+            if (confirm(`确定要制作 ${dishName} 吗？`)) {
                 for (const requiredIng of dish.ingredients) {
                     const availableIng = ingredients.find(ing => 
                         ing.name === requiredIng.name && ing.unit === requiredIng.unit
@@ -2368,44 +924,338 @@
                     if (availableIng) {
                         availableIng.quantity -= requiredIng.quantity;
                         if (availableIng.quantity <= 0) {
-                            const index = ingredients.indexOf(availableIng);
-                            ingredients.splice(index, 1);
+                            ingredients = ingredients.filter(ing => ing.id !== availableIng.id);
                         }
                     }
                 }
-
-                // 添加制作记录
-                const now = new Date();
-                const timeString = `${now.getMonth() + 1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-                cookingHistory.unshift({ dish: dishName, time: timeString, timestamp: now.getTime() });
-                
-                // 保持最近10条记录
-                if (cookingHistory.length > 10) {
-                    cookingHistory = cookingHistory.slice(0, 10);
-                }
-
                 saveData();
                 renderAll();
-                showNotification('制作完成', `🍳 ${dishName} 制作完成！`);
+                alert(`🍳 ${dishName} 制作完成！`);
             }
         }
 
-        // 添加缺失食材到采购清单
-        function addMissingToShopping(dishName) {
-            const dish = getAllDishes().find(d => d.name === dishName);
-            if (!dish) return;
-
-            const missingIngredients = getMissingIngredients(dish);
-            if (missingIngredients.length === 0) return;
-
-            alert(`已将 ${dishName} 所缺食材添加到采购提醒：\n\n${missingIngredients.map(ing => `${ing.name}: ${ing.needed}${ing.unit}`).join('\n')}`);
+        function getAllDishes() {
+            return [...defaultDishes, ...customDishes];
         }
 
-        // 清空制作历史
-        function clearCookingHistory() {
-            if (confirm('确定要清空制作历史吗？')) {
-                cookingHistory = [];
-                saveData();
-                renderCookingHistory();
+        function renderAll() {
+            renderIngredients();
+            renderDishes();
+            renderStats();
+            if (document.getElementById('menu-tab').classList.contains('active')) {
+                renderMenuInfo();
             }
-                
+        }
+
+        function renderIngredients() {
+            const container = document.getElementById('ingredientList');
+            if (ingredients.length === 0) {
+                container.innerHTML = '<div class="empty-message">暂无食材，请添加食材到库存</div>';
+                document.getElementById('clearBtn').style.display = 'none';
+            } else {
+                document.getElementById('clearBtn').style.display = 'block';
+                container.innerHTML = ingredients.map(ingredient => `
+                    <div class="ingredient-item">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-weight: 500;">${ingredient.name}</span>
+                            <span style="color: #6b7280; font-size: 0.875rem;">${ingredient.quantity}${ingredient.unit}</span>
+                        </div>
+                        <button class="btn btn-danger" onclick="removeIngredient(${ingredient.id})">🗑️</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderDishes() {
+            const allDishes = getAllDishes();
+            const container = document.getElementById('dishList');
+            
+            if (allDishes.length === 0) {
+                container.innerHTML = '<div class="empty-message">暂无菜品数据</div>';
+                return;
+            }
+
+            const sortedDishes = allDishes.sort((a, b) => {
+                const aCanMake = canMakeDish(a);
+                const bCanMake = canMakeDish(b);
+                if (aCanMake && !bCanMake) return -1;
+                if (!aCanMake && bCanMake) return 1;
+                return 0;
+            });
+
+            container.innerHTML = sortedDishes.map(dish => {
+                const canMake = canMakeDish(dish);
+                return `
+                    <div class="dish-item ${canMake ? 'dish-available' : 'dish-missing'}" style="margin-bottom: 15px;">
+                        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px;">
+                            <h3 style="font-weight: 600; font-size: 1rem; flex: 1;">${dish.name}</h3>
+                            <span style="padding: 4px 12px; border-radius: 16px; font-size: 0.75rem; font-weight: 500; white-space: nowrap; margin-left: 8px; ${canMake ? 'background: #dcfce7; color: #166534;' : 'background: #fed7aa; color: #9a3412;'}">
+                                ${canMake ? '✅ 可制作' : '⚠️ 缺食材'}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 8px;">
+                            <strong>所需：</strong>
+                            ${dish.ingredients.map(ing => `${ing.name}(${ing.quantity}${ing.unit})`).join('、')}
+                        </div>
+                        ${dish.description ? `<div style="font-size: 0.875rem; color: #374151; background: #f8fafc; padding: 8px; border-radius: 4px; margin: 8px 0; border-left: 3px solid #3b82f6; white-space: pre-line;">${dish.description}</div>` : ''}
+                        <div style="display: flex; gap: 8px; margin-top: 8px;">
+                            ${canMake ? 
+                                `<button class="btn btn-cook" onclick="cookDish('${dish.name}')">🍳 完成制作</button>` : 
+                                `<button class="btn btn-shopping">🛒 采购提醒</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderStats() {
+            const allDishes = getAllDishes();
+            const availableDishes = allDishes.filter(dish => canMakeDish(dish));
+            
+            document.getElementById('statIngredients').textContent = ingredients.length;
+            document.getElementById('statAvailable').textContent = availableDishes.length;
+            document.getElementById('statMissing').textContent = allDishes.length - availableDishes.length;
+        }
+
+        function renderManageDishes() {
+            const allDishes = getAllDishes();
+            document.getElementById('dishCount').textContent = allDishes.length;
+            
+            if (allDishes.length === 0) {
+                document.getElementById('manageDishList').innerHTML = '<div class="empty-message">暂无菜品</div>';
+            } else {
+                document.getElementById('manageDishList').innerHTML = allDishes.map(dish => `
+                    <div class="dish-item" style="border-color: #e5e7eb; background: #f9fafb; margin-bottom: 10px;">
+                        <h3 style="font-weight: 600; margin-bottom: 8px;">${dish.name}</h3>
+                        <div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 8px;">
+                            <strong>所需：</strong>
+                            ${dish.ingredients.map(ing => `${ing.name}(${ing.quantity}${ing.unit})`).join('、')}
+                        </div>
+                        ${dish.description ? `<div style="font-size: 0.875rem; color: #374151; margin-bottom: 8px;">${dish.description}</div>` : ''}
+                    </div>
+                `).join('');
+            }
+        }
+
+        let tempDishIngredients = [];
+
+        function addIngredientToDish() {
+            const name = document.getElementById('newIngName').value.trim();
+            const quantity = parseFloat(document.getElementById('newIngQuantity').value);
+            const unit = document.getElementById('newIngUnit').value;
+
+            if (name && quantity && quantity > 0) {
+                tempDishIngredients.push({ name, quantity, unit });
+                document.getElementById('newIngName').value = '';
+                document.getElementById('newIngQuantity').value = '';
+                renderTempIngredients();
+            } else {
+                alert('请填写完整的食材信息');
+            }
+        }
+
+        function renderTempIngredients() {
+            const container = document.getElementById('dishIngredientsList');
+            if (tempDishIngredients.length === 0) {
+                container.innerHTML = '<div class="empty-message" style="padding: 10px; font-size: 0.8rem;">暂无食材，请添加食材</div>';
+            } else {
+                container.innerHTML = tempDishIngredients.map((ing, index) => `
+                    <div class="ingredient-item" style="margin-bottom: 5px; padding: 10px;">
+                        <span style="font-weight: 500;">${ing.name} - ${ing.quantity}${ing.unit}</span>
+                        <button class="btn btn-danger" onclick="removeTempIngredient(${index})">🗑️</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function removeTempIngredient(index) {
+            tempDishIngredients.splice(index, 1);
+            renderTempIngredients();
+        }
+
+        function saveDish() {
+            const name = document.getElementById('newDishName').value.trim();
+            const description = document.getElementById('newDishDescription').value.trim();
+
+            if (!name) {
+                alert('请输入菜品名称');
+                return;
+            }
+            if (tempDishIngredients.length === 0) {
+                alert('请至少添加一个食材');
+                return;
+            }
+
+            customDishes.push({
+                id: 'custom_' + Date.now(),
+                name,
+                description,
+                ingredients: [...tempDishIngredients]
+            });
+
+            document.getElementById('newDishName').value = '';
+            document.getElementById('newDishDescription').value = '';
+            tempDishIngredients = [];
+            renderTempIngredients();
+
+            saveData();
+            renderAll();
+            renderManageDishes();
+            alert('菜品添加成功！');
+        }
+
+        async function askAI() {
+            const provider = document.getElementById('aiProvider').value;
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const prompt = document.getElementById('aiPrompt').value.trim();
+
+            if (!apiKey) {
+                alert('请先输入API密钥');
+                return;
+            }
+            if (!prompt) {
+                alert('请输入你的问题');
+                return;
+            }
+
+            const askButton = document.getElementById('askAI');
+            const aiIcon = document.getElementById('aiIcon');
+            const resultDiv = document.getElementById('aiResult');
+
+            askButton.disabled = true;
+            aiIcon.innerHTML = '⏳';
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = '正在思考中...';
+
+            try {
+                const ingredientsInfo = ingredients.map(ing => `${ing.name}(${ing.quantity}${ing.unit})`).join('、');
+                const fullPrompt = `我的冰箱里现有食材：${ingredientsInfo || '暂无'}\\n\\n用户问题：${prompt}\\n\\n请根据用户问题给出实用的菜品建议。`;
+
+                let response;
+                if (provider === 'deepseek') {
+                    response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: 'deepseek-chat',
+                            messages: [{
+                                role: 'system',
+                                content: '你是一个专业的烹饪助手。'
+                            }, {
+                                role: 'user',
+                                content: fullPrompt
+                            }],
+                            max_tokens: 2200,
+                            temperature: 0.7
+                        })
+                    });
+                } else {
+                    response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: 'gpt-3.5-turbo',
+                            messages: [{
+                                role: 'system',
+                                content: '你是一个专业的烹饪助手。请用中文回答。'
+                            }, {
+                                role: 'user',
+                                content: fullPrompt
+                            }],
+                            max_tokens: 1500,
+                            temperature: 0.7
+                        })
+                    });
+                }
+
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status}`);
+                }
+
+                const data = await response.json();
+                resultDiv.textContent = data.choices[0].message.content;
+                localStorage.setItem('aiApiKey', apiKey);
+                localStorage.setItem('aiProvider', provider);
+
+            } catch (error) {
+                resultDiv.textContent = `请求失败: ${error.message}\\n\\n请检查：\\n1. API密钥是否正确\\n2. 网络连接是否正常\\n3. API服务是否可用`;
+            } finally {
+                askButton.disabled = false;
+                aiIcon.innerHTML = '🤖';
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('fridgeIngredients', JSON.stringify(ingredients));
+            localStorage.setItem('customDishes', JSON.stringify(customDishes));
+            saveMenuData();
+        }
+
+        function loadAISettings() {
+            const savedApiKey = localStorage.getItem('aiApiKey');
+            const savedProvider = localStorage.getItem('aiProvider');
+            if (savedApiKey) document.getElementById('apiKey').value = savedApiKey;
+            if (savedProvider) document.getElementById('aiProvider').value = savedProvider;
+        }
+
+        function initApp() {
+            initPWA();
+            initCamera();
+            loadAISettings();
+            
+            document.getElementById('addBtn').onclick = addIngredient;
+            document.getElementById('clearBtn').onclick = () => {
+                if (confirm('确定要清空所有食材数据吗？')) {
+                    ingredients = [];
+                    saveData();
+                    renderAll();
+                }
+            };
+            document.getElementById('addIngredientToDish').onclick = addIngredientToDish;
+            document.getElementById('saveDishBtn').onclick = saveDish;
+            document.getElementById('askAI').onclick = askAI;
+
+            ['ingredientName', 'ingredientQuantity'].forEach(id => {
+                document.getElementById(id).onkeypress = (e) => {
+                    if (e.key === 'Enter') addIngredient();
+                };
+            });
+
+            ['newIngName', 'newIngQuantity'].forEach(id => {
+                document.getElementById(id).onkeypress = (e) => {
+                    if (e.key === 'Enter') addIngredientToDish();
+                };
+            });
+
+            document.getElementById('aiPrompt').onkeypress = (e) => {
+                if (e.key === 'Enter' && e.ctrlKey) askAI();
+            };
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js');
+            }
+
+            renderAll();
+            renderManageDishes();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
+        window.switchTab = switchTab;
+        window.removeIngredient = removeIngredient;
+        window.cookDish = cookDish;
+        window.removeTempIngredient = removeTempIngredient;
+    </script>
+</body>
+</html>
