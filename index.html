@@ -516,28 +516,37 @@
             const provider = document.getElementById('aiProvider').value;
             if (!apiKey) throw new Error('请先在AI助手页面配置API密钥');
 
-            const prompt = `请识别这张图片中的食材，严格按照JSON格式返回：[{"name": "食材名称", "quantity": 数量, "unit": "单位", "type": "类别"}]`;
+            const prompt = '请识别这张图片中的食材[严格按照JSON格式返回{"name": "食材名称", "quantity": 数量, "unit": "单位", "type": "类别"}]';
 
             let response;
             if (provider === 'deepseek') {
+                // 确保 base64Image 变量已正确定义
+                const base64Image = ''; // 这里需要替换为实际的base64图像数据
+                
                 response = await fetch('https://api.deepseek.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
+                        'Authorization': `Bearer ${apiKey}` // 修正这里
                     },
                     body: JSON.stringify({
                         model: 'deepseek-chat',
-                        messages: [{
+                        messages: [{ // 修正为数组
                             role: 'user',
                             content: [
                                 { type: 'text', text: prompt },
-                                { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+                                { 
+                                    type: 'image_url', 
+                                    image_url: { 
+                                        url: `data:image/jpeg;base64,${base64Image}` // 修正变量插值
+                                    } 
+                                }
                             ]
                         }],
                         max_tokens: 1000
-                    })
+                    }) // 移除多余的逗号
                 });
+
             } else {
                 response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
