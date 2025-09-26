@@ -90,47 +90,39 @@
             flex-direction: column;
             justify-content: space-between;
         }
-
         .calendar-day:hover {
             border-color: #3b82f6;
             background: #f0f9ff;
         }
-
         .calendar-day.selected {
             border-color: #3b82f6;
             background: #dbeafe;
         }
-
         .calendar-day.today {
             background: #fef3c7;
             border-color: #f59e0b;
         }
-
         .calendar-day.other-month {
             opacity: 0.3;
             pointer-events: none;
         }
-
         .calendar-date {
             font-weight: 600;
             font-size: 0.9rem;
             color: #374151;
             margin-bottom: 4px;
         }
-
         .calendar-weekday {
             font-size: 0.7rem;
             color: #6b7280;
             margin-bottom: 6px;
         }
-
         .calendar-dishes {
             flex: 1;
             display: flex;
             flex-direction: column;
             gap: 2px;
         }
-
         .calendar-dish {
             background: #3b82f6;
             color: white;
@@ -141,7 +133,6 @@
             overflow: hidden;
             white-space: nowrap;
         }
-
         .shopping-need {
             display: inline-block;
             background: #fbbf24;
@@ -151,7 +142,6 @@
             font-size: 0.75rem;
             margin: 2px;
         }
-
         .prep-need {
             display: inline-block;
             background: #a78bfa;
@@ -161,19 +151,51 @@
             font-size: 0.75rem;
             margin: 2px;
         }
-
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .api-status.success {
+            background: rgba(34, 197, 94, 0.1);
+            color: #059669;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        .api-status.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .api-config-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .config-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
         @media (max-width: 767px) {
             .calendar-day {
                 min-height: 60px;
                 padding: 6px;
             }
-            
             .calendar-date {
                 font-size: 0.8rem;
             }
-            
             .calendar-dish {
                 font-size: 0.55rem;
+            }
+            .config-group {
+                grid-template-columns: 1fr;
+                gap: 10px;
             }
         }
     </style>
@@ -402,18 +424,41 @@
         <div id="ai-tab" class="tab-content">
             <div class="ai-section">
                 <h2 style="margin-bottom: 20px;">🤖 AI烹饪助手</h2>
-                <div class="ai-config">
-                    <label>选择AI服务：</label>
-                    <select id="aiProvider" class="select" style="margin-bottom: 10px;">
-                        <option value="deepseek">DeepSeek（推荐）</option>
-                        <option value="openai">OpenAI ChatGPT</option>
-                    </select>
-                    <label>API密钥：</label>
-                    <input type="password" id="apiKey" class="input" placeholder="请输入你的API密钥" style="margin-bottom: 10px;">
-                    <div style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 10px;">💡 DeepSeek API更便宜，ChatGPT更智能。密钥仅本地存储，不会上传。</div>
+                
+                <!-- API配置区域 -->
+                <div class="api-config-section">
+                    <h3 style="margin-bottom: 15px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                        ⚙️ API配置
+                    </h3>
+                    
+                    <div class="config-group">
+                        <!-- 文本助手配置 -->
+                        <div>
+                            <label style="margin-bottom: 8px; display: block; font-weight: 600;">📝 文本助手 (DeepSeek)</label>
+                            <input type="password" id="deepseekApiKey" class="input" placeholder="DeepSeek API密钥" style="margin-bottom: 8px;">
+                            <button id="testDeepSeekBtn" class="btn btn-secondary" style="width: 100%; font-size: 0.8rem;">🔧 测试DeepSeek连接</button>
+                            <div id="deepseekStatus" class="api-status" style="display: none;"></div>
+                        </div>
+                        
+                        <!-- 图像识别配置 -->
+                        <div>
+                            <label style="margin-bottom: 8px; display: block; font-weight: 600;">🖼️ 图像识别 (Qwen3-VL)</label>
+                            <input type="password" id="qwenApiKey" class="input" placeholder="阿里云百炼 API密钥" style="margin-bottom: 8px;">
+                            <button id="testQwenBtn" class="btn btn-secondary" style="width: 100%; font-size: 0.8rem;">🔧 测试Qwen3-VL连接</button>
+                            <div id="qwenStatus" class="api-status" style="display: none;"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="font-size: 0.8rem; opacity: 0.9; margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 6px;">
+                        💡 <strong>功能说明：</strong><br>
+                        • <strong>拍照识别</strong>：使用阿里云Qwen3-VL模型，精准识别食材<br>
+                        • <strong>文字咨询</strong>：使用DeepSeek模型，性价比高，回答专业<br>
+                        • 密钥仅本地存储，不会上传到服务器
+                    </div>
                 </div>
+
                 <div class="form-group" style="background: rgba(255,255,255,0.1);">
-                    <textarea id="aiPrompt" class="textarea" placeholder="向AI描述你的需求，例如：&#10;- 根据我现有的食材推荐几道菜&#10;- 详细介绍菜品的做法&#10;- 推荐一些适合减肥的菜品" style="min-height: 100px; background: rgba(255,255,255,0.9); color: #1f2937;"></textarea>
+                    <textarea id="aiPrompt" class="textarea" placeholder="向AI描述你的需求，例如：&#10;- 根据我现有的食材推荐几道菜&#10;- 详细介绍菜品的做法&#10;- 推荐一些适合减肥的菜品&#10;- 这些食材搭配有什么营养价值" style="min-height: 100px; background: rgba(255,255,255,0.9); color: #1f2937;"></textarea>
                     <button id="askAI" class="btn btn-success" style="margin-top: 10px;"><span id="aiIcon">🤖</span> 询问AI助手</button>
                 </div>
                 <div id="aiResult" class="ai-result" style="display: none;"></div>
@@ -433,7 +478,7 @@
             {
                 id: 'default_1',
                 name: '葱油焖鸡',
-                description: '1. 鸡块提前腌制，热锅下油加入葱姜煎出葱油\\n2. 倒入鸡块翻炒\\n3. 加入调理姜片翻炒均匀出锅',
+                description: '1. 鸡块提前腌制，热锅下油加入葱姜煎出葱油\n2. 倒入鸡块翻炒\n3. 加入调理姜片翻炒均匀出锅',
                 ingredients: [
                     { name: '鸡块', quantity: 1, unit: '份' },
                     { name: '姜', quantity: 0.5, unit: '个' },
@@ -443,15 +488,26 @@
             {
                 id: 'default_2',
                 name: '秋葵炒素肠',
-                description: '1. 秋葵切片清洗\\n2. 素肠切片\\n3. 热锅炒青椒至变色\\n4. 加秋葵素肠炒匀出库',
+                description: '1. 秋葵切片清洗\n2. 素肠切片\n3. 热锅炒青椒至变色\n4. 加秋葵素肠炒匀出库',
                 ingredients: [
                     { name: '秋葵', quantity: 1, unit: '份' },
                     { name: '青椒', quantity: 1, unit: '个' },
                     { name: '素肠', quantity: 0.5, unit: '份' }
                 ]
+            },
+            {
+                id: 'default_3',
+                name: '干锅花菜',
+                description: '1. 花菜切小朵，下锅焯水\n2. 热锅下油，加入辣椒花椒花菜翻炒\n3. 加入调料炒匀即可',
+                ingredients: [
+                    { name: '花菜', quantity: 1, unit: '棵' },
+                    { name: '辣椒', quantity: 0.5, unit: '份' },
+                    { name: '花椒', quantity: 1, unit: '份' }
+                ]
             }
         ];
 
+        // PWA 相关功能
         function initPWA() {
             if (window.matchMedia('(display-mode: standalone)').matches) {
                 document.getElementById('installPrompt').style.display = 'none';
@@ -473,17 +529,24 @@
             };
         }
 
+        // 相机和图像识别功能
         function initCamera() {
             document.getElementById('cameraBtn').onclick = () => {
+                const qwenApiKey = document.getElementById('qwenApiKey').value.trim();
+                if (!qwenApiKey) {
+                    alert('请先在AI助手页面配置Qwen3-VL API密钥');
+                    return;
+                }
                 document.getElementById('cameraInput').click();
             };
+            
             document.getElementById('cameraInput').onchange = async (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    showLoading('正在识别图片中的食材...');
+                    showLoading('正在使用Qwen3-VL识别图片中的食材...');
                     try {
                         const base64 = await fileToBase64(file);
-                        const recognizedItems = await recognizeIngredients(base64);
+                        const recognizedItems = await recognizeIngredientsWithQwen(base64);
                         if (recognizedItems && recognizedItems.length > 0) {
                             displayRecognitionResult(recognizedItems);
                             if (confirm(`识别到 ${recognizedItems.length} 种食材，是否添加到库存？`)) {
@@ -491,9 +554,10 @@
                                 renderAll();
                             }
                         } else {
-                            alert('未能识别到食材，请尝试重新拍照');
+                            alert('未能识别到食材，请尝试重新拍照或手动添加');
                         }
                     } catch (error) {
+                        console.error('图像识别错误:', error);
                         alert('图片识别失败: ' + error.message);
                     } finally {
                         hideLoading();
@@ -511,76 +575,239 @@
             });
         }
 
-        async function recognizeIngredients(base64Image) {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const provider = document.getElementById('aiProvider').value;
-            if (!apiKey) throw new Error('请先在AI助手页面配置API密钥');
+        // 使用Qwen3-VL进行图像识别
+        async function recognizeIngredientsWithQwen(base64Image) {
+            const apiKey = document.getElementById('qwenApiKey').value.trim();
+            if (!apiKey) throw new Error('请先配置Qwen3-VL API密钥');
 
-            const prompt = '请识别这张图片中的食材[严格按照JSON格式返回{"name": "食材名称", "quantity": 数量, "unit": "单位", "type": "类别"}]';
+            const prompt = `请识别这张图片中的食材，严格按照JSON格式返回：
+[{"name": "食材名称", "quantity": 数量, "unit": "单位", "type": "类别"}]
 
-            let response;
-            if (provider === 'deepseek') {
-                // 确保 base64Image 变量已正确定义
-                const base64Image = ''; // 这里需要替换为实际的base64图像数据
-                
-                response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}` // 修正这里
-                    },
-                    body: JSON.stringify({
-                        model: 'deepseek-chat',
-                        messages: [{ // 修正为数组
-                            role: 'user',
-                            content: [
-                                { type: 'text', text: prompt },
-                                { 
-                                    type: 'image_url', 
-                                    image_url: { 
-                                        url: `data:image/jpeg;base64,${base64Image}` // 修正变量插值
-                                    } 
-                                }
-                            ]
-                        }],
-                        max_tokens: 1000
-                    }) // 移除多余的逗号
-                });
+要求：
+1. quantity必须是数字
+2. unit只能是: 个、根、片、袋、盒、份、g、颗、块中的一个
+3. type只能是: 蔬菜、肉类、调料、其他中的一个
+4. 如果无法确定数量，默认设为1
+5. 只返回JSON数组，不要任何解释文字
+6. 请尽可能识别出所有能看到的食材`;
 
-            } else {
-                response = await fetch('https://api.openai.com/v1/chat/completions', {
+            try {
+                const response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${apiKey}`
                     },
                     body: JSON.stringify({
-                        model: 'gpt-4-vision-preview',
+                        model: 'qwen3-vl-plus',
                         messages: [{
                             role: 'user',
                             content: [
-                                { type: 'text', text: prompt },
-                                { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+                                { 
+                                    type: 'text', 
+                                    text: prompt
+                                },
+                                { 
+                                    type: 'image_url', 
+                                    image_url: { 
+                                        url: `data:image/jpeg;base64,${base64Image}`
+                                    } 
+                                }
                             ]
                         }],
-                        max_tokens: 1000
+                        max_tokens: 500,
+                        temperature: 0.1
                     })
                 });
-            }
 
-            if (!response.ok) {
-                throw new Error(`API请求失败: ${response.status}`);
-            }
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Qwen API响应错误:', response.status, errorText);
+                    
+                    if (response.status === 401) {
+                        throw new Error('Qwen API密钥无效，请检查密钥是否正确');
+                    } else if (response.status === 429) {
+                        throw new Error('API调用频率超限，请稍后重试');
+                    } else {
+                        throw new Error(`Qwen API请求失败 (${response.status}): ${errorText.substring(0, 100)}`);
+                    }
+                }
 
-            const data = await response.json();
-            const resultText = data.choices[0].message.content.trim();
+                const data = await response.json();
+                console.log('Qwen API完整响应:', data);
+                
+                if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                    throw new Error('Qwen API返回数据格式异常');
+                }
+                
+                const resultText = data.choices[0].message.content.trim();
+                console.log('Qwen识别原始结果:', resultText);
+                
+                try {
+                    // 清理可能的markdown格式和其他文本
+                    const cleanedText = resultText
+                        .replace(/```json\s*/g, '')
+                        .replace(/```\s*/g, '')
+                        .replace(/^[^[{]*/, '') // 移除开头的非JSON内容
+                        .replace(/[^}\]]*$/, '') // 移除结尾的非JSON内容
+                        .trim();
+                    
+                    console.log('清理后的文本:', cleanedText);
+                    
+                    const parsed = JSON.parse(cleanedText);
+                    
+                    if (!Array.isArray(parsed)) {
+                        throw new Error('返回结果不是数组格式');
+                    }
+                    
+                    // 验证每个识别项的格式
+                    const validItems = parsed.filter(item => {
+                        return item.name && 
+                               typeof item.quantity === 'number' && 
+                               item.unit && 
+                               item.type;
+                    });
+                    
+                    if (validItems.length === 0) {
+                        throw new Error('未识别到有效的食材信息');
+                    }
+                    
+                    return validItems;
+                    
+                } catch (parseError) {
+                    console.error('JSON解析失败:', parseError, '原文:', resultText);
+                    
+                    // 尝试手动提取食材信息
+                    const manualExtracted = extractIngredientsManually(resultText);
+                    if (manualExtracted.length > 0) {
+                        return manualExtracted;
+                    }
+                    
+                    throw new Error('Qwen返回的数据格式不正确，请尝试重新拍照');
+                }
+                
+            } catch (networkError) {
+                console.error('Qwen网络请求错误:', networkError);
+                throw networkError;
+            }
+        }
+
+        // 手动提取食材信息的备用方法
+        function extractIngredientsManually(text) {
+            const ingredients = [];
+            const lines = text.split('\n');
+            
+            for (const line of lines) {
+                // 尝试匹配包含食材信息的行
+                const match = line.match(/["""]?(\w+)["""]?\s*[：:]\s*(\d+(?:\.\d+)?)\s*(\w+)/);
+                if (match) {
+                    const [, name, quantity, unit] = match;
+                    ingredients.push({
+                        name: name.trim(),
+                        quantity: parseFloat(quantity),
+                        unit: unit.trim(),
+                        type: '其他'
+                    });
+                }
+            }
+            
+            return ingredients;
+        }
+
+        // API连接测试功能
+        async function testDeepSeekConnection() {
+            const apiKey = document.getElementById('deepseekApiKey').value.trim();
+            const statusDiv = document.getElementById('deepseekStatus');
+            
+            if (!apiKey) {
+                showStatus(statusDiv, 'error', '请先输入DeepSeek API密钥');
+                return;
+            }
+            
+            showLoading('测试DeepSeek API连接...');
             
             try {
-                const cleanedText = resultText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();
-                return JSON.parse(cleanedText);
-            } catch (parseError) {
-                throw new Error('AI返回的数据格式不正确，请重试');
+                const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [{
+                            role: 'user',
+                            content: '请回答：测试连接成功'
+                        }],
+                        max_tokens: 10
+                    })
+                });
+                
+                if (response.ok) {
+                    showStatus(statusDiv, 'success', '✅ DeepSeek API连接成功！');
+                    localStorage.setItem('deepseekApiKey', apiKey);
+                } else {
+                    const errorText = await response.text();
+                    showStatus(statusDiv, 'error', `❌ DeepSeek连接失败 (${response.status}): ${errorText.substring(0, 50)}...`);
+                }
+            } catch (error) {
+                showStatus(statusDiv, 'error', `❌ 连接测试失败: ${error.message}`);
+            } finally {
+                hideLoading();
             }
+        }
+
+        async function testQwenConnection() {
+            const apiKey = document.getElementById('qwenApiKey').value.trim();
+            const statusDiv = document.getElementById('qwenStatus');
+            
+            if (!apiKey) {
+                showStatus(statusDiv, 'error', '请先输入Qwen3-VL API密钥');
+                return;
+            }
+            
+            showLoading('测试Qwen3-VL API连接...');
+            
+            try {
+                const response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'qwen3-vl-plus',
+                        messages: [{
+                            role: 'user',
+                            content: '请回答：测试连接成功'
+                        }],
+                        max_tokens: 10
+                    })
+                });
+                
+                if (response.ok) {
+                    showStatus(statusDiv, 'success', '✅ Qwen3-VL API连接成功！可以使用拍照识别功能');
+                    localStorage.setItem('qwenApiKey', apiKey);
+                } else {
+                    const errorText = await response.text();
+                    showStatus(statusDiv, 'error', `❌ Qwen连接失败 (${response.status}): ${errorText.substring(0, 50)}...`);
+                }
+            } catch (error) {
+                showStatus(statusDiv, 'error', `❌ 连接测试失败: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function showStatus(statusDiv, type, message) {
+            statusDiv.className = `api-status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'flex';
+            
+            // 5秒后自动隐藏状态
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
         }
 
         function displayRecognitionResult(items) {
@@ -590,7 +817,7 @@
                 `<span class="recognized-item">${item.name}: ${item.quantity}${item.unit}</span>`
             ).join('');
             resultDiv.classList.add('show');
-            setTimeout(() => resultDiv.classList.remove('show'), 5000);
+            setTimeout(() => resultDiv.classList.remove('show'), 8000);
         }
 
         function addIngredientFromRecognition(item) {
@@ -619,6 +846,81 @@
             document.getElementById('loadingOverlay').classList.remove('show');
         }
 
+        // 使用DeepSeek进行AI对话
+        async function askAI() {
+            const deepseekApiKey = document.getElementById('deepseekApiKey').value.trim();
+            const prompt = document.getElementById('aiPrompt').value.trim();
+
+            if (!deepseekApiKey) {
+                alert('请先配置DeepSeek API密钥');
+                return;
+            }
+            if (!prompt) {
+                alert('请输入你的问题');
+                return;
+            }
+
+            const askButton = document.getElementById('askAI');
+            const aiIcon = document.getElementById('aiIcon');
+            const resultDiv = document.getElementById('aiResult');
+
+            askButton.disabled = true;
+            aiIcon.innerHTML = '⏳';
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = '正在使用DeepSeek思考中...';
+
+            try {
+                const ingredientsInfo = ingredients.map(ing => `${ing.name}(${ing.quantity}${ing.unit})`).join('、');
+                const fullPrompt = `我的冰箱里现有食材：${ingredientsInfo || '暂无'}
+
+用户问题：${prompt}
+
+请根据用户问题给出实用的菜品建议，并结合用户已有的食材给到采购建议。如果是询问菜品制作方法，请给出详细步骤。`;
+
+                const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${deepseekApiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [{
+                            role: 'system',
+                            content: '你是一个专业的烹饪助手，擅长根据用户问题推荐菜品并根据用户已有食材给到采购建议，同时提供详细的制作方法。'
+                        }, {
+                            role: 'user',
+                            content: fullPrompt
+                        }],
+                        max_tokens: 2200,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`DeepSeek API请求失败 (${response.status}): ${errorText.substring(0, 100)}`);
+                }
+
+                const data = await response.json();
+                resultDiv.textContent = data.choices[0].message.content;
+                localStorage.setItem('deepseekApiKey', deepseekApiKey);
+
+            } catch (error) {
+                console.error('DeepSeek API错误:', error);
+                resultDiv.textContent = `请求失败: ${error.message}
+
+请检查：
+1. DeepSeek API密钥是否正确
+2. 网络连接是否正常
+3. API服务是否可用`;
+            } finally {
+                askButton.disabled = false;
+                aiIcon.innerHTML = '🤖';
+            }
+        }
+
+        // 标签页切换功能
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -795,486 +1097,4 @@
             todayDishes.forEach(dishName => {
                 const dish = getAllDishes().find(d => d.name === dishName);
                 if (dish && !canMakeDish(dish)) {
-                    const missing = getMissingIngredients(dish);
-                    missing.forEach(ing => {
-                        const existing = allMissingIngredients.find(i => i.name === ing.name && i.unit === ing.unit);
-                        if (existing) {
-                            existing.needed += ing.needed;
-                        } else {
-                            allMissingIngredients.push({...ing});
-                        }
-                    });
-                }
-            });
-
-            if (allMissingIngredients.length === 0) {
-                container.innerHTML = '<div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #92400e;">无需采购</div>';
-            } else {
-                container.innerHTML = allMissingIngredients.map(ing => 
-                    `<span class="shopping-need">${ing.name}: ${ing.needed}${ing.unit}</span>`
-                ).join('');
-            }
-        }
-
-        function renderTomorrowPrep(date) {
-            const dateKey = formatDateKey(date);
-            const tomorrowDishes = weeklyMenu[dateKey] || [];
-            const container = document.getElementById('tomorrowPrep');
-            
-            const allMissingIngredients = [];
-            
-            tomorrowDishes.forEach(dishName => {
-                const dish = getAllDishes().find(d => d.name === dishName);
-                if (dish && !canMakeDish(dish)) {
-                    const missing = getMissingIngredients(dish);
-                    missing.forEach(ing => {
-                        const existing = allMissingIngredients.find(i => i.name === ing.name && i.unit === ing.unit);
-                        if (existing) {
-                            existing.needed += ing.needed;
-                        } else {
-                            allMissingIngredients.push({...ing});
-                        }
-                    });
-                }
-            });
-
-            if (allMissingIngredients.length === 0) {
-                if (tomorrowDishes.length === 0) {
-                    container.innerHTML = '<div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #7c3aed;">暂无安排</div>';
-                } else {
-                    container.innerHTML = '<div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #7c3aed;">✅ 食材充足，无需准备</div>';
-                }
-            } else {
-                container.innerHTML = allMissingIngredients.map(ing => 
-                    `<span class="prep-need">${ing.name}: ${ing.needed}${ing.unit}</span>`
-                ).join('');
-            }
-        }
-
-        function getMissingIngredients(dish) {
-            return dish.ingredients.filter(required => {
-                const available = ingredients.find(ing => 
-                    ing.name === required.name && ing.unit === required.unit
-                );
-                return !available || available.quantity < required.quantity;
-            }).map(missing => {
-                const available = ingredients.find(ing => 
-                    ing.name === missing.name && ing.unit === missing.unit
-                );
-                const needed = available ? 
-                    missing.quantity - available.quantity : 
-                    missing.quantity;
-                return { ...missing, needed };
-            });
-        }
-
-        function formatDateKey(date) {
-            return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-        }
-
-        function changeWeek(direction) {
-            const days = direction * 7;
-            currentWeekStart.setDate(currentWeekStart.getDate() + days);
-            selectedDate = null;
-            renderWeekCalendar();
-            updateSelectedDateInfo();
-        }
-
-        function saveMenuData() {
-            localStorage.setItem('weeklyMenu', JSON.stringify(weeklyMenu));
-        }
-
-        function addIngredient() {
-            const name = document.getElementById('ingredientName').value.trim();
-            const type = document.getElementById('ingredientType').value;
-            const quantity = parseFloat(document.getElementById('ingredientQuantity').value);
-            const unit = document.getElementById('ingredientUnit').value;
-
-            if (name && quantity && quantity > 0) {
-                ingredients.push({ id: Date.now(), name, type, quantity, unit });
-                document.getElementById('ingredientName').value = '';
-                document.getElementById('ingredientQuantity').value = '';
-                saveData();
-                renderAll();
-            } else {
-                alert('请填写完整的食材信息');
-            }
-        }
-
-        function removeIngredient(id) {
-            if (confirm('确定要删除这个食材吗？')) {
-                ingredients = ingredients.filter(ing => ing.id !== id);
-                saveData();
-                renderAll();
-            }
-        }
-
-        function canMakeDish(dish) {
-            return dish.ingredients.every(required => {
-                const available = ingredients.find(ing => 
-                    ing.name === required.name && ing.unit === required.unit
-                );
-                return available && available.quantity >= required.quantity;
-            });
-        }
-
-        function cookDish(dishName) {
-            const dish = getAllDishes().find(d => d.name === dishName);
-            if (!dish || !canMakeDish(dish)) {
-                alert('食材不足，无法制作此菜品');
-                return;
-            }
-
-            if (confirm(`确定要制作 ${dishName} 吗？`)) {
-                for (const requiredIng of dish.ingredients) {
-                    const availableIng = ingredients.find(ing => 
-                        ing.name === requiredIng.name && ing.unit === requiredIng.unit
-                    );
-                    if (availableIng) {
-                        availableIng.quantity -= requiredIng.quantity;
-                        if (availableIng.quantity <= 0) {
-                            ingredients = ingredients.filter(ing => ing.id !== availableIng.id);
-                        }
-                    }
-                }
-                saveData();
-                renderAll();
-                alert(`🍳 ${dishName} 制作完成！`);
-            }
-        }
-
-        function getAllDishes() {
-            return [...defaultDishes, ...customDishes];
-        }
-
-        function renderAll() {
-            renderIngredients();
-            renderDishes();
-            renderStats();
-            if (document.getElementById('menu-tab').classList.contains('active')) {
-                renderMenuInfo();
-            }
-        }
-
-        function renderIngredients() {
-            const container = document.getElementById('ingredientList');
-            if (ingredients.length === 0) {
-                container.innerHTML = '<div class="empty-message">暂无食材，请添加食材到库存</div>';
-                document.getElementById('clearBtn').style.display = 'none';
-            } else {
-                document.getElementById('clearBtn').style.display = 'block';
-                container.innerHTML = ingredients.map(ingredient => `
-                    <div class="ingredient-item">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-weight: 500;">${ingredient.name}</span>
-                            <span style="color: #6b7280; font-size: 0.875rem;">${ingredient.quantity}${ingredient.unit}</span>
-                        </div>
-                        <button class="btn btn-danger" onclick="removeIngredient(${ingredient.id})">🗑️</button>
-                    </div>
-                `).join('');
-            }
-        }
-
-        function renderDishes() {
-            const allDishes = getAllDishes();
-            const container = document.getElementById('dishList');
-            
-            if (allDishes.length === 0) {
-                container.innerHTML = '<div class="empty-message">暂无菜品数据</div>';
-                return;
-            }
-
-            const sortedDishes = allDishes.sort((a, b) => {
-                const aCanMake = canMakeDish(a);
-                const bCanMake = canMakeDish(b);
-                if (aCanMake && !bCanMake) return -1;
-                if (!aCanMake && bCanMake) return 1;
-                return 0;
-            });
-
-            container.innerHTML = sortedDishes.map(dish => {
-                const canMake = canMakeDish(dish);
-                return `
-                    <div class="dish-item ${canMake ? 'dish-available' : 'dish-missing'}" style="margin-bottom: 15px;">
-                        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px;">
-                            <h3 style="font-weight: 600; font-size: 1rem; flex: 1;">${dish.name}</h3>
-                            <span style="padding: 4px 12px; border-radius: 16px; font-size: 0.75rem; font-weight: 500; white-space: nowrap; margin-left: 8px; ${canMake ? 'background: #dcfce7; color: #166534;' : 'background: #fed7aa; color: #9a3412;'}">
-                                ${canMake ? '✅ 可制作' : '⚠️ 缺食材'}
-                            </span>
-                        </div>
-                        <div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 8px;">
-                            <strong>所需：</strong>
-                            ${dish.ingredients.map(ing => `${ing.name}(${ing.quantity}${ing.unit})`).join('、')}
-                        </div>
-                        ${dish.description ? `<div style="font-size: 0.875rem; color: #374151; background: #f8fafc; padding: 8px; border-radius: 4px; margin: 8px 0; border-left: 3px solid #3b82f6; white-space: pre-line;">${dish.description}</div>` : ''}
-                        <div style="display: flex; gap: 8px; margin-top: 8px;">
-                            ${canMake ? 
-                                `<button class="btn btn-cook" onclick="cookDish('${dish.name}')">🍳 完成制作</button>` : 
-                                `<button class="btn btn-shopping">🛒 采购提醒</button>`
-                            }
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function renderStats() {
-            const allDishes = getAllDishes();
-            const availableDishes = allDishes.filter(dish => canMakeDish(dish));
-            
-            document.getElementById('statIngredients').textContent = ingredients.length;
-            document.getElementById('statAvailable').textContent = availableDishes.length;
-            document.getElementById('statMissing').textContent = allDishes.length - availableDishes.length;
-        }
-
-        function renderManageDishes() {
-            const allDishes = getAllDishes();
-            document.getElementById('dishCount').textContent = allDishes.length;
-            
-            if (allDishes.length === 0) {
-                document.getElementById('manageDishList').innerHTML = '<div class="empty-message">暂无菜品</div>';
-            } else {
-                document.getElementById('manageDishList').innerHTML = allDishes.map(dish => `
-                    <div class="dish-item" style="border-color: #e5e7eb; background: #f9fafb; margin-bottom: 10px;">
-                        <h3 style="font-weight: 600; margin-bottom: 8px;">${dish.name}</h3>
-                        <div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 8px;">
-                            <strong>所需：</strong>
-                            ${dish.ingredients.map(ing => `${ing.name}(${ing.quantity}${ing.unit})`).join('、')}
-                        </div>
-                        ${dish.description ? `<div style="font-size: 0.875rem; color: #374151; margin-bottom: 8px;">${dish.description}</div>` : ''}
-                    </div>
-                `).join('');
-            }
-        }
-
-        let tempDishIngredients = [];
-
-        function addIngredientToDish() {
-            const name = document.getElementById('newIngName').value.trim();
-            const quantity = parseFloat(document.getElementById('newIngQuantity').value);
-            const unit = document.getElementById('newIngUnit').value;
-
-            if (name && quantity && quantity > 0) {
-                tempDishIngredients.push({ name, quantity, unit });
-                document.getElementById('newIngName').value = '';
-                document.getElementById('newIngQuantity').value = '';
-                renderTempIngredients();
-            } else {
-                alert('请填写完整的食材信息');
-            }
-        }
-
-        function renderTempIngredients() {
-            const container = document.getElementById('dishIngredientsList');
-            if (tempDishIngredients.length === 0) {
-                container.innerHTML = '<div class="empty-message" style="padding: 10px; font-size: 0.8rem;">暂无食材，请添加食材</div>';
-            } else {
-                container.innerHTML = tempDishIngredients.map((ing, index) => `
-                    <div class="ingredient-item" style="margin-bottom: 5px; padding: 10px;">
-                        <span style="font-weight: 500;">${ing.name} - ${ing.quantity}${ing.unit}</span>
-                        <button class="btn btn-danger" onclick="removeTempIngredient(${index})">🗑️</button>
-                    </div>
-                `).join('');
-            }
-        }
-
-        function removeTempIngredient(index) {
-            tempDishIngredients.splice(index, 1);
-            renderTempIngredients();
-        }
-
-        function saveDish() {
-            const name = document.getElementById('newDishName').value.trim();
-            const description = document.getElementById('newDishDescription').value.trim();
-
-            if (!name) {
-                alert('请输入菜品名称');
-                return;
-            }
-            if (tempDishIngredients.length === 0) {
-                alert('请至少添加一个食材');
-                return;
-            }
-
-            customDishes.push({
-                id: 'custom_' + Date.now(),
-                name,
-                description,
-                ingredients: [...tempDishIngredients]
-            });
-
-            document.getElementById('newDishName').value = '';
-            document.getElementById('newDishDescription').value = '';
-            tempDishIngredients = [];
-            renderTempIngredients();
-
-            saveData();
-            renderAll();
-            renderManageDishes();
-            alert('菜品添加成功！');
-        }
-
-        async function askAI() {
-            const provider = document.getElementById('aiProvider').value;
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const prompt = document.getElementById('aiPrompt').value.trim();
-
-            if (!apiKey) {
-                alert('请先输入API密钥');
-                return;
-            }
-            if (!prompt) {
-                alert('请输入你的问题');
-                return;
-            }
-
-            const askButton = document.getElementById('askAI');
-            const aiIcon = document.getElementById('aiIcon');
-            const resultDiv = document.getElementById('aiResult');
-
-            askButton.disabled = true;
-            aiIcon.innerHTML = '⏳';
-            resultDiv.style.display = 'block';
-            resultDiv.textContent = '正在思考中...';
-
-            try {
-                const ingredientsInfo = ingredients.map(ing => `${ing.name}(${ing.quantity}${ing.unit})`).join('、');
-                const fullPrompt = `我的冰箱里现有食材：${ingredientsInfo || '暂无'}\\n\\n用户问题：${prompt}\\n\\n请根据用户问题给出实用的菜品建议。`;
-
-                let response;
-                if (provider === 'deepseek') {
-                    response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${apiKey}`
-                        },
-                        body: JSON.stringify({
-                            model: 'deepseek-chat',
-                            messages: [{
-                                role: 'system',
-                                content: '你是一个专业的烹饪助手。'
-                            }, {
-                                role: 'user',
-                                content: fullPrompt
-                            }],
-                            max_tokens: 2200,
-                            temperature: 0.7
-                        })
-                    });
-                } else {
-                    response = await fetch('https://api.openai.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${apiKey}`
-                        },
-                        body: JSON.stringify({
-                            model: 'gpt-3.5-turbo',
-                            messages: [{
-                                role: 'system',
-                                content: '你是一个专业的烹饪助手。请用中文回答。'
-                            }, {
-                                role: 'user',
-                                content: fullPrompt
-                            }],
-                            max_tokens: 1500,
-                            temperature: 0.7
-                        })
-                    });
-                }
-
-                if (!response.ok) {
-                    throw new Error(`API请求失败: ${response.status}`);
-                }
-
-                const data = await response.json();
-                resultDiv.textContent = data.choices[0].message.content;
-                localStorage.setItem('aiApiKey', apiKey);
-                localStorage.setItem('aiProvider', provider);
-
-            } catch (error) {
-                resultDiv.textContent = `请求失败: ${error.message}\\n\\n请检查：\\n1. API密钥是否正确\\n2. 网络连接是否正常\\n3. API服务是否可用`;
-            } finally {
-                askButton.disabled = false;
-                aiIcon.innerHTML = '🤖';
-            }
-        }
-
-        function saveData() {
-            localStorage.setItem('fridgeIngredients', JSON.stringify(ingredients));
-            localStorage.setItem('customDishes', JSON.stringify(customDishes));
-            saveMenuData();
-        }
-
-        function loadAISettings() {
-            const savedApiKey = localStorage.getItem('aiApiKey');
-            const savedProvider = localStorage.getItem('aiProvider');
-            if (savedApiKey) document.getElementById('apiKey').value = savedApiKey;
-            if (savedProvider) document.getElementById('aiProvider').value = savedProvider;
-        }
-
-        function initApp() {
-            console.log('智能冰箱管理系统初始化...');
-            
-            initPWA();
-            initCamera();
-            loadAISettings();
-            
-            document.getElementById('addBtn').onclick = addIngredient;
-            document.getElementById('clearBtn').onclick = () => {
-                if (confirm('确定要清空所有食材数据吗？')) {
-                    ingredients = [];
-                    saveData();
-                    renderAll();
-                }
-            };
-            document.getElementById('addIngredientToDish').onclick = addIngredientToDish;
-            document.getElementById('saveDishBtn').onclick = saveDish;
-            document.getElementById('askAI').onclick = askAI;
-            
-            // 菜单功能事件绑定
-            document.getElementById('quickAddBtn').onclick = quickAddDish;
-            document.getElementById('prevWeekBtn').onclick = () => changeWeek(-1);
-            document.getElementById('nextWeekBtn').onclick = () => changeWeek(1);
-
-            ['ingredientName', 'ingredientQuantity'].forEach(id => {
-                document.getElementById(id).onkeypress = (e) => {
-                    if (e.key === 'Enter') addIngredient();
-                };
-            });
-
-            ['newIngName', 'newIngQuantity'].forEach(id => {
-                document.getElementById(id).onkeypress = (e) => {
-                    if (e.key === 'Enter') addIngredientToDish();
-                };
-            });
-
-            document.getElementById('aiPrompt').onkeypress = (e) => {
-                if (e.key === 'Enter' && e.ctrlKey) askAI();
-            };
-
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('./sw.js').catch(e => console.log('SW注册失败:', e));
-            }
-
-            renderAll();
-            renderManageDishes();
-            initWeekCalendar();
-            
-            console.log('应用初始化完成！');
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initApp);
-        } else {
-            initApp();
-        }
-
-        window.switchTab = switchTab;
-        window.removeIngredient = removeIngredient;
-        window.cookDish = cookDish;
-        window.removeTempIngredient = removeTempIngredient;
-    </script>
-</body>
-</html>
+                    
