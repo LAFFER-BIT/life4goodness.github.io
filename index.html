@@ -422,7 +422,7 @@
         </div>
 
         <div id="ai-tab" class="tab-content">
-            <div class="ai-section">
+                            <div class="ai-section">
                 <h2 style="margin-bottom: 20px;">🤖 AI烹饪助手</h2>
                 
                 <!-- API配置区域 -->
@@ -434,7 +434,7 @@
                     <div class="config-group">
                         <!-- 文本助手配置 -->
                         <div>
-                            <label style="margin-bottom: 8px; display: block; font-weight: 600;">📝 文本助手 (DeepSeek)</label>
+                            <label style="margin-bottom: 8px; display: block; font-weight: 600; color: white;">📝 文本助手 (DeepSeek)</label>
                             <input type="password" id="deepseekApiKey" class="input" placeholder="DeepSeek API密钥" style="margin-bottom: 8px;">
                             <button id="testDeepSeekBtn" class="btn btn-secondary" style="width: 100%; font-size: 0.8rem;">🔧 测试DeepSeek连接</button>
                             <div id="deepseekStatus" class="api-status" style="display: none;"></div>
@@ -442,7 +442,7 @@
                         
                         <!-- 图像识别配置 -->
                         <div>
-                            <label style="margin-bottom: 8px; display: block; font-weight: 600;">🖼️ 图像识别 (Qwen3-VL)</label>
+                            <label style="margin-bottom: 8px; display: block; font-weight: 600; color: white;">🖼️ 图像识别 (Qwen3-VL)</label>
                             <input type="password" id="qwenApiKey" class="input" placeholder="阿里云百炼 API密钥" style="margin-bottom: 8px;">
                             <button id="testQwenBtn" class="btn btn-secondary" style="width: 100%; font-size: 0.8rem;">🔧 测试Qwen3-VL连接</button>
                             <div id="qwenStatus" class="api-status" style="display: none;"></div>
@@ -453,7 +453,10 @@
                         💡 <strong>功能说明：</strong><br>
                         • <strong>拍照识别</strong>：使用阿里云Qwen3-VL模型，精准识别食材<br>
                         • <strong>文字咨询</strong>：使用DeepSeek模型，性价比高，回答专业<br>
-                        • 密钥仅本地存储，不会上传到服务器
+                        • 密钥仅本地存储，不会上传到服务器<br><br>
+                        <strong>🔑 如何获取API密钥：</strong><br>
+                        • DeepSeek: <a href="https://platform.deepseek.com" target="_blank" style="color: #60a5fa;">https://platform.deepseek.com</a><br>
+                        • Qwen3-VL: <a href="https://bailian.console.aliyun.com" target="_blank" style="color: #60a5fa;">https://bailian.console.aliyun.com</a>
                     </div>
                 </div>
 
