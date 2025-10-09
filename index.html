@@ -227,10 +227,10 @@
         </div>
 
         <div class="tabs">
-            <button class="tab-button active" onclick="switchTab('menu')">📅 本周菜单</button>
-            <button class="tab-button" onclick="switchTab('ingredients')">🥬 食材管理</button>
-            <button class="tab-button" onclick="switchTab('manage')">📋 菜品库管理</button>
-            <button class="tab-button" onclick="switchTab('ai')">🤖 AI助手</button>
+            <button class="tab-button active" onclick="window.switchTab('menu')">📅 本周菜单</button>
+            <button class="tab-button" onclick="window.switchTab('ingredients')">🥬 食材管理</button>
+            <button class="tab-button" onclick="window.switchTab('manage')">📋 菜品库管理</button>
+            <button class="tab-button" onclick="window.switchTab('ai')">🤖 AI助手</button>
         </div>
 
         <!-- 本周菜单标签页 -->
@@ -923,28 +923,49 @@
             }
         }
 
-        // 标签页切换功能
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(tabName + '-tab').classList.add('active');
+        // 标签页切换功能 - 必须在全局作用域
+        window.switchTab = function(tabName) {
+            console.log('Switching to tab:', tabName);
             
-            // 找到对应的按钮并激活
-            const buttons = document.querySelectorAll('.tab-button');
-            buttons.forEach(btn => {
-                if (btn.textContent.includes('本周菜单') && tabName === 'menu') btn.classList.add('active');
-                if (btn.textContent.includes('食材管理') && tabName === 'ingredients') btn.classList.add('active');
-                if (btn.textContent.includes('菜品库管理') && tabName === 'manage') btn.classList.add('active');
-                if (btn.textContent.includes('AI助手') && tabName === 'ai') btn.classList.add('active');
+            // 移除所有活动状态
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
             });
             
+            // 激活选中的标签页内容
+            const targetTab = document.getElementById(tabName + '-tab');
+            if (targetTab) {
+                targetTab.classList.add('active');
+            } else {
+                console.error('Tab not found:', tabName + '-tab');
+            }
+            
+            // 激活选中的标签按钮
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach((btn, index) => {
+                const btnText = btn.textContent.toLowerCase();
+                if ((btnText.includes('本周菜单') || btnText.includes('菜单')) && tabName === 'menu') {
+                    btn.classList.add('active');
+                } else if ((btnText.includes('食材管理') || btnText.includes('食材')) && tabName === 'ingredients') {
+                    btn.classList.add('active');
+                } else if ((btnText.includes('菜品库') || btnText.includes('管理')) && tabName === 'manage') {
+                    btn.classList.add('active');
+                } else if ((btnText.includes('ai') || btnText.includes('助手')) && tabName === 'ai') {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // 根据不同标签页执行特定操作
             if (tabName === 'manage') {
                 renderManageDishes();
             } else if (tabName === 'menu') {
                 initWeekCalendar();
                 renderMenuInfo();
             }
-        }
+        };
 
         // 菜单规划相关函数
         function initWeekCalendar() {
