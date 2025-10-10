@@ -3,17 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能冰箱管理系统 v2.0</title>
+    <title>智能冰箱管理系统 - 云同步完整版</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); min-height: 100vh; padding: 10px; }
         .container { max-width: 100%; margin: 0 auto; padding: 0 10px; }
-        .header { text-align: center; margin-bottom: 15px; padding: 10px 0; }
-        .header h1 { color: #1f2937; font-size: 1.8rem; margin-bottom: 5px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .header { text-align: center; margin-bottom: 15px; padding: 10px 0; position: relative; }
+        .header h1 { color: #1f2937; font-size: 1.8rem; margin-bottom: 5px; }
         .header p { color: #6b7280; font-size: 0.85rem; }
+        
+        /* 云同步指示器 */
+        .sync-indicator { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: white; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-size: 0.8rem; cursor: pointer; transition: all 0.2s; z-index: 100; }
+        .sync-indicator:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .sync-indicator.synced { border: 2px solid #10b981; color: #059669; }
+        .sync-indicator.syncing { border: 2px solid #f59e0b; color: #d97706; }
+        .sync-indicator.offline { border: 2px solid #6b7280; color: #6b7280; }
+        .sync-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 2s infinite; }
+        .sync-dot.green { background: #10b981; }
+        .sync-dot.yellow { background: #f59e0b; }
+        .sync-dot.gray { background: #6b7280; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
         .tabs { display: flex; background: white; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); margin-bottom: 15px; overflow: hidden; }
         .tab-button { flex: 1; padding: 12px 8px; border: none; background: transparent; cursor: pointer; font-size: 0.85rem; font-weight: 500; color: #6b7280; transition: all 0.2s; }
-        .tab-button.active { background: #3b7de9; color: white; }
+        .tab-button.active { background: #3b82f6; color: white; }
         .tab-content { display: none; min-height: calc(100vh - 160px); }
         .tab-content.active { display: block; }
         .main-grid { display: grid; grid-template-columns: 1fr; gap: 15px; min-height: calc(100vh - 180px); }
@@ -27,37 +46,48 @@
         .input, .select, .textarea { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.8rem; width: 100%; }
         .textarea { resize: vertical; min-height: 60px; }
         .input:focus, .select:focus, .textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
-        .btn { padding: 6px 12px; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 3px; transition: all 0.2s; }
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 3px; transition: all 0.2s; font-weight: 500; }
+        .btn:hover:not(:disabled) { transform: translateY(-1px); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-primary { background: #3b82f6; color: white; }
-        .btn-primary:hover:not(:disabled) { background: #2563eb; }
         .btn-secondary { background: #6b7280; color: white; }
         .btn-success { background: #059669; color: white; }
         .btn-danger { background: #ef4444; color: white; font-size: 0.75rem; padding: 4px 8px; }
         .btn-clear { background: transparent; color: #ef4444; border: 1px solid #ef4444; font-size: 0.75rem; padding: 4px 8px; }
         .btn-cook { background: #10b981; color: white; font-size: 0.75rem; padding: 6px 12px; }
-        .ingredient-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: white; border-radius: 6px; margin-bottom: 4px; border: 1px solid #e5e7eb; }
+        .ingredient-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: white; border-radius: 6px; margin-bottom: 4px; border: 1px solid #e5e7eb; transition: all 0.2s; }
+        .ingredient-item:hover { border-color: #3b82f6; }
         .dish-item { padding: 12px; background: #f9fafb; border-radius: 6px; margin-bottom: 6px; border: 2px solid; }
         .dish-available { background: #f0fdf4; border-color: #bbf7d0; }
         .dish-missing { background: #fff7ed; border-color: #fed7aa; }
         .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 15px; }
-        .stat-card { background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); padding: 12px; text-align: center; }
+        .stat-card { background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); padding: 12px; text-align: center; transition: all 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); }
         .stat-number { font-size: 1.3rem; font-weight: bold; margin-bottom: 2px; }
         .stat-label { color: #6b7280; font-size: 0.8rem; }
         .empty-message { text-align: center; color: #6b7280; padding: 15px; font-size: 0.8rem; }
         .ai-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; padding: 20px; margin-bottom: 15px; }
         .ai-result { background: rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 12px; margin-top: 12px; white-space: pre-wrap; line-height: 1.6; max-height: 400px; overflow-y: auto; min-height: 100px; }
+        
+        /* 模态框 */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; border-radius: 16px; padding: 28px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        
         .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; }
         .loading-overlay.show { display: flex; }
         .loading-content { background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 280px; width: 90%; }
         .loading-spinner { width: 40px; height: 40px; border: 4px solid #f3f4f6; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .camera-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px; }
+        
+        .camera-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px; transition: all 0.2s; }
+        .camera-btn:hover { transform: translateY(-1px); }
         .camera-input { display: none; }
         .recognition-result { background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-bottom: 15px; display: none; }
         .recognition-result.show { display: block; }
         .recognized-items { display: flex; flex-wrap: wrap; gap: 6px; }
         .recognized-item { background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid #bbf7d0; }
+        
         .calendar-day { background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 8px; text-align: center; cursor: pointer; transition: all 0.2s; min-height: 80px; display: flex; flex-direction: column; }
         .calendar-day:hover { border-color: #3b82f6; background: #f0f9ff; }
         .calendar-day.selected { border-color: #3b82f6; background: #dbeafe; }
@@ -66,9 +96,61 @@
         .calendar-weekday { font-size: 0.7rem; color: #6b7280; margin-bottom: 6px; }
         .calendar-dishes { flex: 1; display: flex; flex-direction: column; gap: 2px; }
         .calendar-dish { background: #3b82f6; color: white; font-size: 0.6rem; padding: 2px 4px; border-radius: 3px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+        
+        .sync-code-display { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 24px; border-radius: 12px; text-align: center; margin: 20px 0; box-shadow: 0 10px 15px -3px rgba(59,130,246,0.3); }
+        .sync-code { font-size: 3.5rem; font-weight: bold; letter-spacing: 12px; margin: 20px 0; font-family: 'Courier New', monospace; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem; line-height: 1.5; }
+        .alert-success { background: #dcfce7; border-left: 4px solid #10b981; color: #166534; }
+        .alert-info { background: #dbeafe; border-left: 4px solid #3b82f6; color: #1e40af; }
+        
+        @media (max-width: 767px) {
+            .sync-indicator { position: static; margin: 10px auto; justify-content: center; }
+        }
     </style>
 </head>
 <body>
+    <!-- 同步模态框 -->
+    <div id="syncModal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 24px; color: #1f2937; font-size: 1.6rem; font-weight: 700;">🔄 设备间数据同步</h2>
+            
+            <div class="alert alert-success">
+                <strong>✨ 云同步已启用！</strong><br>
+                数据会自动保存到云端，可在多台设备间实时同步。
+            </div>
+            
+            <div id="syncCodeSection">
+                <div class="sync-code-display">
+                    <div style="font-size: 1.1rem; margin-bottom: 10px; opacity: 0.95; font-weight: 600;">您的同步码</div>
+                    <div class="sync-code" id="displaySyncCode">------</div>
+                    <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 16px;">在其他设备输入此码即可同步数据</div>
+                    <button id="copySyncCodeBtn" class="btn" style="background: white; color: #3b82f6; font-weight: 600; padding: 12px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">📋 复制同步码</button>
+                </div>
+                
+                <div style="text-align: center; margin: 28px 0; color: #9ca3af; font-size: 0.95rem; font-weight: 500;">或</div>
+            </div>
+            
+            <div>
+                <h3 style="margin-bottom: 14px; color: #374151; font-size: 1.2rem; font-weight: 600;">输入其他设备的同步码</h3>
+                <p style="color: #6b7280; margin-bottom: 14px; font-size: 0.9rem;">输入6位数字同步码，立即获取其他设备的数据</p>
+                <div style="display: flex; gap: 12px;">
+                    <input type="text" id="inputSyncCode" class="input" placeholder="123456" maxlength="6" style="flex: 1; text-align: center; font-size: 1.8rem; letter-spacing: 6px; font-family: 'Courier New', monospace; font-weight: 600;">
+                    <button id="useSyncCodeBtn" class="btn btn-success" style="padding: 12px 24px; font-weight: 600;">🔄 同步</button>
+                </div>
+            </div>
+            
+            <div class="alert alert-info" style="margin-top: 20px;">
+                <strong>💡 同步说明：</strong><br>
+                • 同步码生成后永久有效<br>
+                • 可以在无限台设备上使用<br>
+                • 所有设备的数据会实时自动同步
+            </div>
+            
+            <button id="closeSyncModalBtn" class="btn btn-secondary" style="width: 100%; margin-top: 20px; padding: 12px;">关闭</button>
+        </div>
+    </div>
+
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
             <div class="loading-spinner"></div>
@@ -78,8 +160,12 @@
 
     <div class="container">
         <div class="header">
-            <h1>🧊 智能膳食管理系统</h1>
-            <p>管理您的食材库存，获取AI菜品推荐和AI烹饪建议</p>
+            <h1>🧊 智能冰箱管理系统</h1>
+            <p>管理您的食材库存，获取智能菜品推荐和AI烹饪建议</p>
+            <div id="syncIndicator" class="sync-indicator syncing" onclick="openSyncModal()">
+                <div class="sync-dot yellow"></div>
+                <span>正在连接...</span>
+            </div>
         </div>
 
         <div class="tabs">
@@ -299,9 +385,29 @@
     </div>
 
     <script>
-        let ingredients = JSON.parse(localStorage.getItem('fridgeIngredients') || '[]');
-        let customDishes = JSON.parse(localStorage.getItem('customDishes') || '[]');
-        let weeklyMenu = JSON.parse(localStorage.getItem('weeklyMenu') || '{}');
+        // ============================================
+        // 预配置的 Firebase 信息
+        // ============================================
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDmLT56NhPS7waFqssx9YPlqkB-eGFbOQw",
+            authDomain: "fitness-management4p.firebaseapp.com",
+            projectId: "fitness-management4p",
+            storageBucket: "fitness-management4p.firebasestorage.app",
+            messagingSenderId: "752371346113",
+            appId: "1:752371346113:web:9abbf22bddba5e77364240"
+        };
+
+        // 全局变量
+        let firebaseInitialized = false;
+        let db = null;
+        let auth = null;
+        let currentUserId = null;
+        let currentSyncCode = null;
+        let isSyncing = false;
+        
+        let ingredients = [];
+        let customDishes = [];
+        let weeklyMenu = {};
         let currentWeekStart = new Date();
         let selectedDate = null;
         let tempDishIngredients = [];
@@ -311,6 +417,180 @@
             { id: 'default_2', name: '秋葵炒素肠', description: '1. 秋葵切片清洗\n2. 素肠切片\n3. 热锅炒青椒至变色\n4. 加秋葵素肠炒匀出库', ingredients: [{ name: '秋葵', quantity: 1, unit: '份' }, { name: '青椒', quantity: 1, unit: '个' }, { name: '素肠', quantity: 0.5, unit: '份' }] }
         ];
 
+        // ============================================
+        // Firebase 初始化和同步功能
+        // ============================================
+        function initFirebase() {
+            try {
+                console.log('🚀 初始化 Firebase...');
+                firebase.initializeApp(FIREBASE_CONFIG);
+                
+                auth = firebase.auth();
+                db = firebase.firestore();
+                firebaseInitialized = true;
+                
+                updateSyncIndicator('syncing', '正在登录...');
+                
+                auth.signInAnonymously().then(async (result) => {
+                    currentUserId = result.user.uid;
+                    console.log('✅ 登录成功，用户ID:', currentUserId);
+                    
+                    const syncCodeDoc = await db.collection('users').doc(currentUserId).get();
+                    if (syncCodeDoc.exists) {
+                        currentSyncCode = syncCodeDoc.data().syncCode;
+                        console.log('📱 已有同步码:', currentSyncCode);
+                    } else {
+                        currentSyncCode = generateSyncCode();
+                        console.log('🆕 生成新同步码:', currentSyncCode);
+                        await db.collection('users').doc(currentUserId).set({
+                            syncCode: currentSyncCode,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        await db.collection('syncCodes').doc(currentSyncCode).set({
+                            userId: currentUserId
+                        });
+                    }
+                    
+                    listenToDataChanges();
+                    updateSyncIndicator('synced', '已同步');
+                }).catch((error) => {
+                    console.error('❌ 登录失败:', error);
+                    updateSyncIndicator('offline', '连接失败');
+                    loadLocalData();
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('❌ Firebase初始化失败:', error);
+                updateSyncIndicator('offline', '离线模式');
+                loadLocalData();
+                return false;
+            }
+        }
+
+        function generateSyncCode() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
+        }
+
+        function listenToDataChanges() {
+            if (!firebaseInitialized || !currentUserId) return;
+            console.log('👂 开始监听数据变化...');
+            db.collection('userData').doc(currentUserId).onSnapshot((doc) => {
+                if (doc.exists && !isSyncing) {
+                    console.log('📥 收到远程数据更新');
+                    const data = doc.data();
+                    ingredients = data.ingredients || [];
+                    customDishes = data.customDishes || [];
+                    weeklyMenu = data.weeklyMenu || {};
+                    renderAll();
+                    renderManageDishes();
+                }
+            });
+        }
+
+        async function syncToCloud() {
+            if (!firebaseInitialized || !currentUserId || isSyncing) return;
+            try {
+                isSyncing = true;
+                updateSyncIndicator('syncing', '同步中...');
+                console.log('☁️ 正在同步到云端...');
+                
+                await db.collection('userData').doc(currentUserId).set({
+                    ingredients: ingredients,
+                    customDishes: customDishes,
+                    weeklyMenu: weeklyMenu,
+                    lastSync: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+                
+                console.log('✅ 同步完成');
+                updateSyncIndicator('synced', '已同步');
+                setTimeout(() => { isSyncing = false; }, 500);
+            } catch (error) {
+                console.error('❌ 同步失败:', error);
+                updateSyncIndicator('offline', '同步失败');
+                isSyncing = false;
+            }
+        }
+
+        function updateSyncIndicator(status, text) {
+            const indicator = document.getElementById('syncIndicator');
+            const dot = indicator.querySelector('.sync-dot');
+            indicator.className = `sync-indicator ${status}`;
+            indicator.querySelector('span').textContent = text;
+            dot.className = 'sync-dot ' + (status === 'synced' ? 'green' : status === 'syncing' ? 'yellow' : 'gray');
+        }
+
+        function loadLocalData() {
+            ingredients = JSON.parse(localStorage.getItem('fridgeIngredients') || '[]');
+            customDishes = JSON.parse(localStorage.getItem('customDishes') || '[]');
+            weeklyMenu = JSON.parse(localStorage.getItem('weeklyMenu') || '{}');
+        }
+
+        function saveData() {
+            localStorage.setItem('fridgeIngredients', JSON.stringify(ingredients));
+            localStorage.setItem('customDishes', JSON.stringify(customDishes));
+            localStorage.setItem('weeklyMenu', JSON.stringify(weeklyMenu));
+            if (firebaseInitialized) syncToCloud();
+        }
+
+        function openSyncModal() {
+            if (!currentSyncCode) {
+                alert('正在连接云服务，请稍候...');
+                return;
+            }
+            document.getElementById('displaySyncCode').textContent = currentSyncCode;
+            document.getElementById('syncModal').classList.add('show');
+        }
+
+        function copySyncCode() {
+            navigator.clipboard.writeText(currentSyncCode).then(() => {
+                alert('✅ 同步码已复制！\n\n' + currentSyncCode);
+            }).catch(() => {
+                alert('同步码: ' + currentSyncCode + '\n\n请手动复制');
+            });
+        }
+
+        async function useSyncCode() {
+            const code = document.getElementById('inputSyncCode').value.trim();
+            if (!code || code.length !== 6) return alert('请输入6位同步码');
+            showLoading('正在同步数据...');
+            try {
+                const codeDoc = await db.collection('syncCodes').doc(code).get();
+                if (!codeDoc.exists) {
+                    hideLoading();
+                    return alert('❌ 同步码不存在');
+                }
+                const targetUserId = codeDoc.data().userId;
+                const dataDoc = await db.collection('userData').doc(targetUserId).get();
+                if (dataDoc.exists) {
+                    const data = dataDoc.data();
+                    ingredients = data.ingredients || [];
+                    customDishes = data.customDishes || [];
+                    weeklyMenu = data.weeklyMenu || {};
+                    currentUserId = targetUserId;
+                    currentSyncCode = code;
+                    saveData();
+                    renderAll();
+                    renderManageDishes();
+                    document.getElementById('syncModal').classList.remove('show');
+                    alert('✅ 数据同步成功！');
+                }
+            } catch (error) {
+                alert('❌ 同步失败: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // ============================================
+        // 工具函数
+        // ============================================
+        function showLoading(text) { document.getElementById('loadingText').textContent = text; document.getElementById('loadingOverlay').classList.add('show'); }
+        function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+        function getAllDishes() { return [...defaultDishes, ...customDishes]; }
+        function canMakeDish(dish) { return dish.ingredients.every(r => { const a = ingredients.find(i => i.name === r.name && i.unit === r.unit); return a && a.quantity >= r.quantity; }); }
+        function getMissingIngredients(dish) { return dish.ingredients.filter(r => { const a = ingredients.find(i => i.name === r.name && i.unit === r.unit); return !a || a.quantity < r.quantity; }).map(m => { const a = ingredients.find(i => i.name === m.name && i.unit === m.unit); return {...m, needed: a ? m.quantity - a.quantity : m.quantity}; }); }
+
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
@@ -319,13 +599,6 @@
             if (tabName === 'manage') renderManageDishes();
             if (tabName === 'menu') { initWeekCalendar(); renderMenuInfo(); }
         }
-
-        function getAllDishes() { return [...defaultDishes, ...customDishes]; }
-        function canMakeDish(dish) { return dish.ingredients.every(r => { const a = ingredients.find(i => i.name === r.name && i.unit === r.unit); return a && a.quantity >= r.quantity; }); }
-        function getMissingIngredients(dish) { return dish.ingredients.filter(r => { const a = ingredients.find(i => i.name === r.name && i.unit === r.unit); return !a || a.quantity < r.quantity; }).map(m => { const a = ingredients.find(i => i.name === m.name && i.unit === m.unit); return {...m, needed: a ? m.quantity - a.quantity : m.quantity}; }); }
-        function saveData() { localStorage.setItem('fridgeIngredients', JSON.stringify(ingredients)); localStorage.setItem('customDishes', JSON.stringify(customDishes)); localStorage.setItem('weeklyMenu', JSON.stringify(weeklyMenu)); }
-        function showLoading(text) { document.getElementById('loadingText').textContent = text; document.getElementById('loadingOverlay').classList.add('show'); }
-        function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
 
         function addIngredient() {
             const name = document.getElementById('ingredientName').value.trim();
@@ -568,7 +841,7 @@
             }).join('');
         }
 
-        // AI功能
+        // AI功能（与原版相同，略）
         document.getElementById('cameraBtn').onclick = () => {
             if (!document.getElementById('qwenApiKey').value.trim()) return alert('请先配置Qwen3-VL API');
             document.getElementById('cameraInput').click();
@@ -594,6 +867,7 @@
                             if (ex) ex.quantity += i.quantity;
                             else ingredients.push({id:Date.now()+Math.random(), name:i.name, type:i.type||'其他', quantity:i.quantity, unit:i.unit});
                         });
+                        saveData();
                         renderAll();
                     }
                 }
@@ -731,6 +1005,9 @@
         }
 
         // 初始化
+        document.getElementById('copySyncCodeBtn').onclick = copySyncCode;
+        document.getElementById('useSyncCodeBtn').onclick = useSyncCode;
+        document.getElementById('closeSyncModalBtn').onclick = () => document.getElementById('syncModal').classList.remove('show');
         document.getElementById('addBtn').onclick = addIngredient;
         document.getElementById('clearBtn').onclick = () => { if(confirm('确定清空？')) { ingredients=[]; saveData(); renderAll(); } };
         document.getElementById('addIngredientToDish').onclick = addIngredientToDish;
@@ -742,10 +1019,15 @@
         document.getElementById('testQwenBtn').onclick = testQwen;
         document.getElementById('askAI').onclick = askAI;
 
-        loadSettings();
-        renderAll();
-        renderManageDishes();
-        initWeekCalendar();
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 应用启动中...');
+            loadLocalData();
+            loadSettings();
+            renderAll();
+            renderManageDishes();
+            initWeekCalendar();
+            initFirebase(); // 初始化Firebase云同步
+        });
     </script>
 </body>
 </html>
