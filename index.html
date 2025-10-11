@@ -792,7 +792,7 @@
 
         要求：
         1. quantity必须是数字
-        2. unit只能是: 个、根、片、袋、盒、份、g、颗、块中的一个
+        2. unit只能是: 个、根、份、g中的一个
         3. type只能是: 蔬菜、肉类、调料、其他中的一个
         4. 如果无法确定数量，默认设为1
         5. 只返回JSON数组，不要任何解释文字`;
@@ -804,7 +804,7 @@
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'qwen-vl-plus',
+                    model: 'qwen3-vl-plus',
                     messages: [{
                         role: 'user',
                         content: [
