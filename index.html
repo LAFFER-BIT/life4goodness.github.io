@@ -711,8 +711,26 @@
         // ============================================
         window.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 应用启动中...');
+            
+            // 1. 先加载本地数据
             loadLocalData();
+            
+            // 2. 渲染界面
             renderAll();
+            
+            // 3. 初始化AI功能
+            loadAPIKeys();
+            initCamera();
+            
+            // 4. 初始化日历（依赖DOM元素）
+            try {
+                initWeekCalendar();
+                console.log('✅ 日历初始化成功');
+            } catch (error) {
+                console.error('❌ 日历初始化失败:', error);
+            }
+            
+            // 5. 最后初始化Firebase连接
             initFirebase();
         });
         // ============================================
@@ -1006,9 +1024,7 @@
         document.getElementById('testQwenBtn').onclick = testQwenConnection;
         document.getElementById('askAI').onclick = askAI;
 
-        // 初始化
-        loadAPIKeys();
-        initCamera();
+
 
         // ============================================
         // 日历菜单功能
@@ -1147,8 +1163,7 @@
         document.getElementById('prevWeekBtn').onclick = () => changeWeek(-1);
         document.getElementById('nextWeekBtn').onclick = () => changeWeek(1);
 
-        // 在应用启动时初始化日历
-        initWeekCalendar();
+
     </script>
     
 </body>
