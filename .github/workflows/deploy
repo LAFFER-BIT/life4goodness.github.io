@@ -1,37 +1,26 @@
-name: build-and-deploy-gh-pages
+name: Deploy to GitHub Pages
+
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Create runtime firebase-config.js from secrets
+      - uses: actions/checkout@v3
+      
+      - name: Replace secrets
         run: |
-          mkdir -p assets
-          sed -e "s|__API_KEY__|${{ secrets.FIREBASE_API_KEY }}|g" \
-              -e "s|__AUTH_DOMAIN__|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g" \
-              -e "s|__PROJECT_ID__|${{ secrets.FIREBASE_PROJECT_ID }}|g" \
-              -e "s|__STORAGE_BUCKET__|${{ secrets.FIREBASE_STORAGE_BUCKET }}|g" \
-              -e "s|__MSG_SENDER_ID__|${{ secrets.FIREBASE_MSG_SENDER_ID }}|g" \
-              -e "s|__APP_ID__|${{ secrets.FIREBASE_APP_ID }}|g" \
-              assets/firebase-config.template.js > assets/firebase-config.js
-
-      # 如果你有构建步骤（例如 vite / webpack），在这里安装并构建
-      # - name: Use Node
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: 18
-      # - run: npm ci
-      # - run: npm run build
-      # 假设你是纯静态，直接把仓库根目录当作站点源
-
-      - name: Deploy to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
+          sed -i 's/__API_KEY__/${{ secrets.FIREBASE_API_KEY }}/g' config.js
+          sed -i 's/__PROJECT_ID__/${{ secrets.FIREBASE_PROJECT_ID }}/g' config.js
+          sed -i 's/__APP_ID__/${{ secrets.FIREBASE_APP_ID }}/g' config.js
+          sed -i 's/__MSG_SENDER_ID__/${{ secrets.FIREBASE_MSG_SENDER_ID }}/g' config.js
+          sed -i 's/fitness-management4p.firebaseapp.com/${{ secrets.FIREBASE_AUTH_DOMAIN }}/g' config.js
+          sed -i 's/fitness-management4p.firebasestorage.app/${{ secrets.FIREBASE_STORAGE_BUCKET }}/g' config.js
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./
-          publish_branch: gh-pages
