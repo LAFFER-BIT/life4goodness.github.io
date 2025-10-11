@@ -2,12 +2,12 @@
 window.APP_CONFIG = {
   production: {
     firebase: {
-      apiKey: "__API_KEY__",
+      apiKey: "AIzaSyDmLT56NhPS7waFqssx9YPlqkB-eGFbOQw",
       authDomain: "fitness-management4p.firebaseapp.com",            // 例如 your-project.firebaseapp.com
-      projectId: "__PROJECT_ID__",
+      projectId: "fitness-management4p",
       storageBucket: "fitness-management4p.firebasestorage.app", // ✅ 正确的存储桶域名
-      messagingSenderId: "__MSG_SENDER_ID__",
-      appId: "__APP_ID__"
+      messagingSenderId: "752371346113",
+      appId: "1:752371346113:web:9abbf22bddba5e77364240"
     }
   }
 };
