@@ -9,7 +9,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    
+    <!-- 配置文件（从外部加载，在部署时由GitHub Actions生成） -->
+    <script src="./config.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); min-height: 100vh; padding: 10px; }
@@ -338,9 +339,15 @@
         // ============ Firebase配置和初始化 ============
         function getFirebaseConfig() {
             // 检查外部config.js
-            if (typeof window.FIREBASE_CONFIG !== 'undefined') {
-                console.log('✅ 使用外部Firebase配置');
-                return window.FIREBASE_CONFIG;
+            if (typeof window.APP_CONFIG !== 'undefined' && window.APP_CONFIG.production) {
+                const cfg = window.APP_CONFIG.production.firebase;
+                return {
+                    apiKey: cfg.apiKey,
+                    authDomain: `${cfg.projectId}.firebaseapp.com`,
+                    projectId: cfg.projectId,
+                    storageBucket: `${cfg.projectId}.firebasestorage.app`,
+                    appId: cfg.appId
+                };
             }
             
             // 尝试从localStorage读取
