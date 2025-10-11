@@ -176,68 +176,63 @@
                 </div>
             </div>
         </div>
- <!-- 食材管理 -->
-        <div id="ingredients-tab" class="tab-content">
-            <div class="main-grid">
-                <div class="card" style="display: flex; flex-direction: column; height: 100%;">
-                    <div class="card-header">
-                        <h2 class="card-title">➕ 食材库存</h2>
-                        <button id="clearBtn" class="btn btn-clear" style="display: none;">清空</button>
-                    </div>
-                    <button id="cameraBtn" class="camera-btn">📷 拍照识别食材</button>
-                    <input type="file" id="cameraInput" class="camera-input" accept="image/*" capture="camera">
-                    <div id="recognitionResult" class="recognition-result">
-                        <h4 style="color: #059669; margin-bottom: 8px;">🎯 识别结果</h4>
-                        <div id="recognizedItems" class="recognized-items"></div>
-                    </div>
-                    <div class="form-group">
-                        <div class="form-row">
-                            <input type="text" id="ingredientName" class="input" placeholder="食材名称">
-                            <select id="ingredientType" class="select">
-                                <option value="蔬菜">蔬菜</option>
-                                <option value="肉类">肉类</option>
-                                <option value="调料">调料</option>
-                                <option value="其他">其他</option>
-                            </select>
-                        </div>
-                        <div class="form-row-3">
-                            <input type="number" id="ingredientQuantity" class="input" placeholder="数量">
-                            <select id="ingredientUnit" class="select">
-                                <option value="份">份</option>
-                                <option value="个">个</option>
-                                <option value="根">根</option>
-                                <option value="g">g</option>
-                            </select>
-                            <button id="addBtn" class="btn btn-primary">➕ 添加</button>
-                        </div>
-                    </div>
-                    <div id="ingredientList" style="flex: 1; overflow-y: auto; background: #fafafa; border-radius: 6px; padding: 8px; border: 1px solid #e5e7eb; margin-bottom: 10px;">
-                        <div class="empty-message">暂无食材</div>
-                    </div>
-                    <div class="stats">
-                        <div class="stat-card">
-                            <div id="statIngredients" class="stat-number" style="color: #3b82f6;">0</div>
-                            <div class="stat-label">库存总数</div>
-                        </div>
-                        <div class="stat-card">
-                            <div id="statAvailable" class="stat-number" style="color: #059669;">0</div>
-                            <div class="stat-label">可制作</div>
-                        </div>
-                        <div class="stat-card">
-                            <div id="statMissing" class="stat-number" style="color: #d97706;">0</div>
-                            <div class="stat-label">需补充</div>
-                        </div>
-                    </div>
+<!-- 食材管理 -->
+<div id="ingredients-tab" class="tab-content">
+    <div class="main-grid">
+        <div class="card" style="display: flex; flex-direction: column; height: 100%;">
+            <div class="card-header">
+                <h2 class="card-title">➕ 食材库存</h2>
+                <button id="clearBtn" class="btn btn-clear" style="display: none;">清空</button>
+            </div>
+            <button id="cameraBtn" class="camera-btn">📷 拍照识别食材</button>
+            <input type="file" id="cameraInput" class="camera-input" accept="image/*" capture="camera">
+            
+            <div class="form-group">
+                <div class="form-row">
+                    <input type="text" id="ingredientName" class="input" placeholder="食材名称">
+                    <select id="ingredientType" class="select">
+                        <option value="蔬菜">蔬菜</option>
+                        <option value="肉类">肉类</option>
+                        <option value="调料">调料</option>
+                        <option value="其他">其他</option>
+                    </select>
                 </div>
-                <div class="card" style="display: flex; flex-direction: column; height: 100%;">
-                    <h2 class="card-title">👨‍🍳 智能菜品推荐</h2>
-                    <div id="dishList" style="flex: 1; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; background: #fafafa;">
-                        <div class="empty-message">正在加载...</div>
-                    </div>
+                <div class="form-row-3">
+                    <input type="number" id="ingredientQuantity" class="input" placeholder="数量">
+                    <select id="ingredientUnit" class="select">
+                        <option value="份">份</option>
+                        <option value="个">个</option>
+                        <option value="根">根</option>
+                        <option value="g">g</option>
+                    </select>
+                    <button id="addBtn" class="btn btn-primary">➕ 添加</button>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div id="statIngredients" class="stat-number" style="color: #3b82f6;">0</div>
+                    <div class="stat-label">库存总数</div>
+                </div>
+                <div class="stat-card">
+                    <div id="statAvailable" class="stat-number" style="color: #059669;">0</div>
+                    <div class="stat-label">可制作</div>
+                </div>
+                <div class="stat-card">
+                    <div id="statMissing" class="stat-number" style="color: #d97706;">0</div>
+                    <div class="stat-label">需补充</div>
                 </div>
             </div>
         </div>
 
+        <div class="card" style="display: flex; flex-direction: column; height: 100%;">
+            <h2 class="card-title">📦 食材分类库存</h2>
+            <div id="ingredientsByCategory" style="flex: 1; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; background: #fafafa;">
+                <div class="empty-message">暂无食材</div>
+            </div>
+        </div>
+    </div>
+</div>
         <!-- 菜品库管理 -->
         <div id="manage-tab" class="tab-content">
             <div class="main-grid">
@@ -521,11 +516,106 @@
         }
 
         function renderIngredients() {
-            const container = document.getElementById('ingredientList');
+            // 按类型分组
+            const grouped = {
+                '蔬菜': [],
+                '肉类': [],
+                '调料': [],
+                '其他': []
+            };
+            
+            ingredients.forEach(ing => {
+                if (grouped[ing.type]) {
+                    grouped[ing.type].push(ing);
+                } else {
+                    grouped['其他'].push(ing);
+                }
+            });
+            
+            const container = document.getElementById('ingredientsByCategory');
+            const clearBtn = document.getElementById('clearBtn');
+            
             if (ingredients.length === 0) {
                 container.innerHTML = '<div class="empty-message">暂无食材</div>';
+                clearBtn.style.display = 'none';
             } else {
-                container.innerHTML = ingredients.map(i => `<div class="ingredient-item"><span>${i.name} ${i.quantity}${i.unit}</span><button class="btn btn-danger" onclick="removeIngredient(${i.id})">🗑️</button></div>`).join('');
+                clearBtn.style.display = 'block';
+                
+                const typeEmojis = {
+                    '蔬菜': '🥬',
+                    '肉类': '🥩',
+                    '调料': '🧂',
+                    '其他': '📦'
+                };
+                
+                const typeColors = {
+                    '蔬菜': '#22c55e',
+                    '肉类': '#ef4444',
+                    '调料': '#f59e0b',
+                    '其他': '#6b7280'
+                };
+                
+                let html = '';
+                
+                Object.entries(grouped).forEach(([type, items]) => {
+                    if (items.length > 0) {
+                        html += `
+                            <div style="margin-bottom: 20px;">
+                                <div style="background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 100%); padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; font-weight: 600; font-size: 0.95rem; color: #374151; border-left: 4px solid ${typeColors[type]}; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 1.2rem;">${typeEmojis[type]}</span>
+                                    <span>${type}</span>
+                                    <span style="margin-left: auto; font-size: 0.85rem; color: #6b7280;">共 ${items.length} 种</span>
+                                </div>
+                                <div>
+                                    ${items.map(ing => `
+                                        <div class="ingredient-item" style="margin-bottom: 8px; padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                                                <div style="flex: 1; min-width: 120px;">
+                                                    <input type="text" value="${ing.name}" onchange="updateIngredientName(${ing.id}, this.value)" style="font-weight: 500; border: 1px solid transparent; padding: 4px 8px; border-radius: 4px; background: #f9fafb; width: 100%;" onfocus="this.style.borderColor='#3b82f6'; this.style.background='white'" onblur="this.style.borderColor='transparent'; this.style.background='#f9fafb'">
+                                                </div>
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    <button class="btn btn-secondary" onclick="adjustQuantity(${ing.id}, -1)" style="padding: 4px 8px; font-size: 0.9rem;">−</button>
+                                                    <span style="font-weight: 600; min-width: 60px; text-align: center; font-size: 0.95rem;">${ing.quantity}${ing.unit}</span>
+                                                    <button class="btn btn-primary" onclick="adjustQuantity(${ing.id}, 1)" style="padding: 4px 8px; font-size: 0.9rem;">+</button>
+                                                    <button class="btn btn-danger" onclick="removeIngredient(${ing.id})" style="padding: 4px 8px; margin-left: 4px;">🗑️</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                container.innerHTML = html;
+            }
+        }
+
+        // 新增：调整食材数量
+        function adjustQuantity(id, change) {
+            const ingredient = ingredients.find(i => i.id === id);
+            if (ingredient) {
+                ingredient.quantity += change;
+                if (ingredient.quantity <= 0) {
+                    if (confirm('数量为0，是否删除该食材？')) {
+                        ingredients = ingredients.filter(i => i.id !== id);
+                    } else {
+                        ingredient.quantity = 1; // 最小保持为1
+                    }
+                }
+                saveData();
+                renderAll();
+            }
+        }
+
+        // 新增：更新食材名称
+        function updateIngredientName(id, newName) {
+            const ingredient = ingredients.find(i => i.id === id);
+            if (ingredient && newName.trim()) {
+                ingredient.name = newName.trim();
+                saveData();
+                renderAll();
             }
         }
 
@@ -792,7 +882,7 @@
 
         要求：
         1. quantity必须是数字
-        2. unit只能是: 个、根、份、g中的一个
+        2. unit只能是: 个、根、片、袋、盒、份、g、颗、块中的一个
         3. type只能是: 蔬菜、肉类、调料、其他中的一个
         4. 如果无法确定数量，默认设为1
         5. 只返回JSON数组，不要任何解释文字`;
@@ -919,6 +1009,146 @@
         // 初始化
         loadAPIKeys();
         initCamera();
+
+        // ============================================
+        // 日历菜单功能
+        // ============================================
+        function initWeekCalendar() {
+            setCurrentWeekStart();
+            renderWeekCalendar();
+            updateQuickDishSelect();
+            updateCurrentDateDisplay();
+        }
+
+        function setCurrentWeekStart() {
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // 周一开始
+            currentWeekStart = new Date(now);
+            currentWeekStart.setDate(now.getDate() + diff);
+            currentWeekStart.setHours(0, 0, 0, 0);
+        }
+
+        function renderWeekCalendar() {
+            const container = document.getElementById('weekCalendar');
+            const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            container.innerHTML = '';
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(currentWeekStart);
+                date.setDate(currentWeekStart.getDate() + i);
+                const dateKey = formatDateKey(date);
+                const dayDishes = weeklyMenu[dateKey] || [];
+
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                if (date.getTime() === today.getTime()) {
+                    dayElement.classList.add('today');
+                }
+                
+                dayElement.onclick = () => selectDate(date, dayElement);
+
+                dayElement.innerHTML = `
+                    <div style="font-size: 0.7rem; color: #6b7280; margin-bottom: 6px;">${weekdays[i]}</div>
+                    <div style="font-weight: 600; font-size: 0.9rem; color: #374151; margin-bottom: 4px;">${date.getDate()}</div>
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                        ${dayDishes.map(dish => `<div style="background: #3b82f6; color: white; font-size: 0.6rem; padding: 2px 4px; border-radius: 3px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="${dish}">${dish}</div>`).join('')}
+                    </div>
+                `;
+
+                container.appendChild(dayElement);
+            }
+        }
+
+        function selectDate(date, element) {
+            document.querySelectorAll('.calendar-day').forEach(day => day.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedDate = date;
+            updateSelectedDateInfo();
+        }
+
+        function updateSelectedDateInfo() {
+            const info = document.getElementById('selectedDateInfo');
+            if (selectedDate) {
+                const dateStr = selectedDate.toLocaleDateString('zh-CN', {
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                });
+                info.textContent = `已选择：${dateStr}`;
+            } else {
+                info.textContent = '请先选择日期';
+            }
+        }
+
+        function updateCurrentDateDisplay() {
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+            document.getElementById('currentDate').textContent = dateStr;
+        }
+
+        function updateQuickDishSelect() {
+            const select = document.getElementById('quickDishSelect');
+            const allDishes = getAllDishes();
+            
+            select.innerHTML = '<option value="">选择菜品...</option>';
+            allDishes.forEach(dish => {
+                const option = document.createElement('option');
+                option.value = dish.name;
+                option.textContent = dish.name;
+                select.appendChild(option);
+            });
+        }
+
+        function quickAddDish() {
+            const dishName = document.getElementById('quickDishSelect').value;
+            if (!dishName || !selectedDate) {
+                alert('请选择日期和菜品');
+                return;
+            }
+
+            const dateKey = formatDateKey(selectedDate);
+            if (!weeklyMenu[dateKey]) {
+                weeklyMenu[dateKey] = [];
+            }
+            
+            if (!weeklyMenu[dateKey].includes(dishName)) {
+                weeklyMenu[dateKey].push(dishName);
+                saveData();
+                renderWeekCalendar();
+                alert(`已将"${dishName}"添加到${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日`);
+            } else {
+                alert('该菜品已在当天菜单中');
+            }
+        }
+
+        function formatDateKey(date) {
+            return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+        }
+
+        function changeWeek(direction) {
+            const days = direction * 7;
+            currentWeekStart.setDate(currentWeekStart.getDate() + days);
+            selectedDate = null;
+            renderWeekCalendar();
+            updateSelectedDateInfo();
+        }
+
+        // 添加事件监听器
+        document.getElementById('quickAddBtn').onclick = quickAddDish;
+        document.getElementById('prevWeekBtn').onclick = () => changeWeek(-1);
+        document.getElementById('nextWeekBtn').onclick = () => changeWeek(1);
+
+        // 在应用启动时初始化日历
+        initWeekCalendar();
     </script>
     
 </body>
