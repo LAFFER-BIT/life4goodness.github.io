@@ -9,8 +9,10 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
     <!-- 配置文件（从外部加载，在部署时由GitHub Actions生成） -->
     <script src="./config.js"></script>
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); min-height: 100vh; padding: 10px; }
@@ -327,13 +329,14 @@
         let ingredients = [];
         let customDishes = [];
         let weeklyMenu = {};
+        let cookedDishes = {}; // 记录已制作的菜品 { '2025-01-15': ['葱油焖鸡'] }
         let currentWeekStart = new Date();
         let selectedDate = null;
         let tempDishIngredients = [];
 
         const defaultDishes = [
             { id: 'default_1', name: '葱油焖鸡', description: '1. 鸡块提前腌制\n2. 倒入鸡块翻炒\n3. 加入调料翻炒均匀出锅', ingredients: [{ name: '鸡块', quantity: 1, unit: '份' }, { name: '姜', quantity: 0.5, unit: '个' }, { name: '葱', quantity: 1, unit: '根' }] },
-            { id: 'default_2', name: '秋葵炒素肠', description: '1. 秋葵切片清洗\n2. 素肠切片\n3. 热锅炒青椒\n4. 加秋葵素肠炒匀', ingredients: [{ name: '秋葵', quantity: 1, unit: '份' }, { name: '青椒', quantity: 1, unit: '个' }] }
+            { id: 'default_2', name: '秋葵炒素肠', description: '1. 秋葵切片清洗\n2. 素肠切片\n3. 热锅炒青椒\n4. 加秋葵素肠炒匀', ingredients: [{ name: '秋葵', quantity: 1, unit: '份' }, { name: '素肠', quantity: 1, unit: '份' },  { name: '青椒', quantity: 1, unit: '个' }] }
         ];
 
         // ============ Firebase配置和初始化 ============
@@ -436,6 +439,7 @@
                     ingredients = data.ingredients || [];
                     customDishes = data.customDishes || [];
                     weeklyMenu = data.weeklyMenu || {};
+                    cookedDishes = data.cookedDishes || {};
                     renderAll();
                 }
             }, (error) => {
@@ -454,6 +458,7 @@
                     ingredients,
                     customDishes,
                     weeklyMenu,
+                    cookedDishes,
                     lastSync: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
                 
@@ -491,12 +496,14 @@
             ingredients = JSON.parse(localStorage.getItem('fridgeIngredients') || '[]');
             customDishes = JSON.parse(localStorage.getItem('customDishes') || '[]');
             weeklyMenu = JSON.parse(localStorage.getItem('weeklyMenu') || '{}');
+            cookedDishes = JSON.parse(localStorage.getItem('cookedDishes') || '{}');
         }
 
         function saveData() {
             localStorage.setItem('fridgeIngredients', JSON.stringify(ingredients));
             localStorage.setItem('customDishes', JSON.stringify(customDishes));
             localStorage.setItem('weeklyMenu', JSON.stringify(weeklyMenu));
+            localStorage.setItem('cookedDishes', JSON.stringify(cookedDishes));
             
             if (firebaseInitialized) {
                 syncToCloud();
@@ -650,12 +657,20 @@
 
         function cookDish(name) {
             const dish = getAllDishes().find(d => d.name === name);
-            if (!canMakeDish(dish)) {
-                alert('食材不足');
+            if (!dish) {
+                alert('菜品不存在');
                 return;
             }
             
-            if (confirm(`确定制作 ${name}?`)) {
+            if (!canMakeDish(dish)) {
+                const missing = getMissingIngredients(dish);
+                const missingList = missing.map(m => `${m.name} ${m.needed}${m.unit}`).join('、');
+                alert(`食材不足，还需要：\n${missingList}`);
+                return;
+            }
+            
+            if (confirm(`确定制作 ${name}?\n\n将扣除以下食材：\n${dish.ingredients.map(i => `${i.name} ${i.quantity}${i.unit}`).join('\n')}`)) {
+                // 扣除食材
                 dish.ingredients.forEach(required => {
                     const available = ingredients.find(ing => 
                         ing.name === required.name && ing.unit === required.unit
@@ -668,9 +683,26 @@
                     }
                 });
                 
+                // 记录已制作的菜品
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const dateKey = formatDateKey(today);
+                
+                if (!cookedDishes[dateKey]) {
+                    cookedDishes[dateKey] = [];
+                }
+                
+                // 添加制作记录（包含时间戳）
+                if (!cookedDishes[dateKey].some(item => item.name === name)) {
+                    cookedDishes[dateKey].push({
+                        name: name,
+                        timestamp: Date.now()
+                    });
+                }
+                
                 saveData();
                 renderAll();
-                alert(`🍳 ${name} 制作完成!`);
+                alert(`🍳 ${name} 制作完成！\n\n已在日历上标记为已完成 ✓`);
             }
         }
 
@@ -690,6 +722,8 @@
             updateQuickDishSelect();
             updateCurrentDateDisplay();
             renderTodayMenu(); // 渲染今日菜单
+            renderTodayShopping(); // 渲染当天采购
+            renderTomorrowPrep(); // 渲染明天准备
         }
 
         function setCurrentWeekStart() {
@@ -701,6 +735,151 @@
             currentWeekStart.setHours(0, 0, 0, 0);
         }
 
+        function renderTodayShopping() {
+            const container = document.getElementById('todayShopping');
+            if (!container) return;
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dateKey = formatDateKey(today);
+            const todayDishes = weeklyMenu[dateKey] || [];
+            
+            // 收集所有缺失的食材
+            const allMissingIngredients = [];
+            
+            todayDishes.forEach(dishName => {
+                const dish = getAllDishes().find(d => d.name === dishName);
+                if (dish && !canMakeDish(dish)) {
+                    const missing = getMissingIngredients(dish);
+                    missing.forEach(ing => {
+                        const existing = allMissingIngredients.find(i => 
+                            i.name === ing.name && i.unit === ing.unit
+                        );
+                        if (existing) {
+                            existing.needed += ing.needed;
+                        } else {
+                            allMissingIngredients.push({...ing});
+                        }
+                    });
+                }
+            });
+
+            if (allMissingIngredients.length === 0) {
+                container.innerHTML = '<div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #92400e;">✅ 无需采购</div>';
+            } else {
+                container.innerHTML = `
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        ${allMissingIngredients.map(ing => `
+                            <span style="background: #fbbf24; color: #78350f; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+                                🛒 ${ing.name} <strong>${ing.needed}${ing.unit}</strong>
+                            </span>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
+
+        function renderTomorrowPrep() {
+            const container = document.getElementById('tomorrowPrep');
+            if (!container) return;
+            
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            const dateKey = formatDateKey(tomorrow);
+            const tomorrowDishes = weeklyMenu[dateKey] || [];
+            
+            if (tomorrowDishes.length === 0) {
+                container.innerHTML = '<div class="empty-message" style="padding: 5px; font-size: 0.8rem; color: #7c3aed;">暂无安排</div>';
+                return;
+            }
+            
+            // 收集所有缺失的食材
+            const allMissingIngredients = [];
+            
+            tomorrowDishes.forEach(dishName => {
+                const dish = getAllDishes().find(d => d.name === dishName);
+                if (dish && !canMakeDish(dish)) {
+                    const missing = getMissingIngredients(dish);
+                    missing.forEach(ing => {
+                        const existing = allMissingIngredients.find(i => 
+                            i.name === ing.name && i.unit === ing.unit
+                        );
+                        if (existing) {
+                            existing.needed += ing.needed;
+                        } else {
+                            allMissingIngredients.push({...ing});
+                        }
+                    });
+                }
+            });
+
+            if (allMissingIngredients.length === 0) {
+                container.innerHTML = `
+                    <div style="font-size: 0.85rem; color: #7c3aed;">
+                        <div style="font-weight: 500; margin-bottom: 6px;">📅 明天安排了 ${tomorrowDishes.length} 道菜：</div>
+                        <div style="color: #9333ea;">
+                            ${tomorrowDishes.join('、')}
+                        </div>
+                        <div style="margin-top: 8px; color: #059669; font-weight: 500;">
+                            ✅ 食材充足，无需准备
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div style="font-size: 0.85rem; margin-bottom: 8px; color: #7c3aed; font-weight: 500;">
+                        📅 明天安排了 ${tomorrowDishes.length} 道菜
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        ${allMissingIngredients.map(ing => `
+                            <span style="background: #a78bfa; color: #5b21b6; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+                                📦 ${ing.name} <strong>${ing.needed}${ing.unit}</strong>
+                            </span>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
+
+        function removeDishFromMenu(date, dishName) {
+            const dateKey = formatDateKey(date);
+            if (weeklyMenu[dateKey]) {
+                weeklyMenu[dateKey] = weeklyMenu[dateKey].filter(d => d !== dishName);
+                if (weeklyMenu[dateKey].length === 0) {
+                    delete weeklyMenu[dateKey];
+                }
+                saveData();
+                renderWeekCalendar();
+                renderTodayMenu();
+                renderTodayShopping();
+                renderTomorrowPrep();
+            }
+        }
+
+        function getMissingIngredients(dish) {
+            if (!dish) return [];
+            
+            return dish.ingredients.filter(required => {
+                const available = ingredients.find(ing => 
+                    ing.name === required.name && ing.unit === required.unit
+                );
+                return !available || available.quantity < required.quantity;
+            }).map(missing => {
+                const available = ingredients.find(ing => 
+                    ing.name === missing.name && ing.unit === missing.unit
+                );
+                const needed = available ? 
+                    missing.quantity - available.quantity : 
+                    missing.quantity;
+                return { 
+                    name: missing.name, 
+                    needed: needed,
+                    unit: missing.unit 
+                };
+            });
+        }
+
         function renderTodayMenu() {
             const container = document.getElementById('todayMenu');
             if (!container) return;
@@ -709,22 +888,112 @@
             today.setHours(0, 0, 0, 0);
             const dateKey = formatDateKey(today);
             const todayDishes = weeklyMenu[dateKey] || [];
+            const cooked = cookedDishes[dateKey] || [];
+            const cookedNames = cooked.map(item => typeof item === 'string' ? item : item.name);
             
             if (todayDishes.length === 0) {
                 container.innerHTML = '<div class="empty-message" style="padding: 5px;">暂无菜品安排</div>';
             } else {
                 container.innerHTML = todayDishes.map(dishName => {
                     const dish = getAllDishes().find(d => d.name === dishName);
-                    const canMake = dish ? canMakeDish(dish) : false;
+                    const isCooked = cookedNames.includes(dishName);
+                    
+                    if (!dish) {
+                        return `
+                            <div style="padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-weight: 500; color: #dc2626;">${dishName}</span>
+                                    <button class="btn btn-danger" onclick="removeDishFromMenu(new Date(), '${dishName}')" style="padding: 3px 6px; font-size: 0.7rem;">
+                                        ✕
+                                    </button>
+                                </div>
+                                <span style="font-size: 0.75rem; color: #dc2626;">（菜品不存在）</span>
+                            </div>
+                        `;
+                    }
+                    
+                    // 已完成的菜品样式
+                    if (isCooked) {
+                        return `
+                            <div style="padding: 10px; background: #f0fdf4; border: 2px solid #10b981; border-radius: 6px; margin-bottom: 8px; position: relative; opacity: 0.9;">
+                                <div style="position: absolute; top: 8px; right: 8px; background: #10b981; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 600;">
+                                    ✓ 已完成
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                    <span style="font-weight: 600; color: #059669; font-size: 0.95rem; text-decoration: line-through; opacity: 0.8;">${dishName}</span>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #059669;">
+                                    🍳 制作于 ${new Date(cooked.find(c => (typeof c === 'string' ? c : c.name) === dishName)?.timestamp || Date.now()).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                                <button class="btn btn-danger" onclick="unmarkDishAsCooked('${dishName}')" style="padding: 4px 8px; font-size: 0.7rem; margin-top: 8px;">
+                                    ↩️ 撤销完成
+                                </button>
+                            </div>
+                        `;
+                    }
+                    
+                    const canMake = canMakeDish(dish);
+                    const missingItems = canMake ? [] : getMissingIngredients(dish);
+                    
                     return `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #bbf7d0;">
-                            <span style="font-weight: 500; color: #374151;">${dishName}</span>
-                            <span style="font-size: 0.75rem; color: ${canMake ? '#059669' : '#dc2626'};">
-                                ${canMake ? '✅ 可制作' : '⚠️ 缺食材'}
-                            </span>
+                        <div style="padding: 10px; background: ${canMake ? '#f0fdf4' : '#fff7ed'}; border: 1px solid ${canMake ? '#bbf7d0' : '#fed7aa'}; border-radius: 6px; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: ${canMake ? '0' : '8px'};">
+                                <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-weight: 600; color: #374151; font-size: 0.95rem;">${dishName}</span>
+                                    <span style="font-size: 0.75rem; color: ${canMake ? '#059669' : '#d97706'}; font-weight: 500; padding: 2px 8px; background: ${canMake ? '#dcfce7' : '#fed7aa'}; border-radius: 12px;">
+                                        ${canMake ? '✅ 可制作' : '⚠️ 缺食材'}
+                                    </span>
+                                </div>
+                                <button class="btn btn-danger" onclick="removeDishFromMenu(new Date(), '${dishName}')" style="padding: 3px 6px; font-size: 0.7rem;" title="从今日菜单中移除">
+                                    ✕
+                                </button>
+                            </div>
+                            ${!canMake && missingItems.length > 0 ? `
+                                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #fed7aa;">
+                                    <div style="font-size: 0.75rem; color: #92400e; font-weight: 500; margin-bottom: 6px;">
+                                        🛒 需采购：
+                                    </div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                        ${missingItems.map(item => `
+                                            <span style="background: #fbbf24; color: #78350f; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 500;">
+                                                ${item.name} ${item.needed}${item.unit}
+                                            </span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${canMake ? `
+                                <div style="margin-top: 8px;">
+                                    <button class="btn btn-cook" onclick="cookDish('${dish.name}')" style="padding: 6px 12px; font-size: 0.75rem;">
+                                        🍳 完成制作
+                                    </button>
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 }).join('');
+            }
+        }
+
+        function unmarkDishAsCooked(dishName) {
+            if (confirm(`确定要撤销"${dishName}"的完成状态吗？\n\n注意：食材不会恢复`)) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const dateKey = formatDateKey(today);
+                
+                if (cookedDishes[dateKey]) {
+                    cookedDishes[dateKey] = cookedDishes[dateKey].filter(item => {
+                        const name = typeof item === 'string' ? item : item.name;
+                        return name !== dishName;
+                    });
+                    
+                    if (cookedDishes[dateKey].length === 0) {
+                        delete cookedDishes[dateKey];
+                    }
+                    
+                    saveData();
+                    renderAll();
+                }
             }
         }
 
@@ -743,6 +1012,8 @@
                 date.setDate(currentWeekStart.getDate() + i);
                 const dateKey = formatDateKey(date);
                 const dayDishes = weeklyMenu[dateKey] || [];
+                const cooked = cookedDishes[dateKey] || [];
+                const cookedNames = cooked.map(item => typeof item === 'string' ? item : item.name);
 
                 const dayElement = document.createElement('div');
                 dayElement.className = 'calendar-day';
@@ -756,9 +1027,15 @@
                     <div style="font-size: 0.7rem; color: #6b7280; margin-bottom: 6px;">${weekdays[i]}</div>
                     <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px;">${date.getDate()}</div>
                     <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
-                        ${dayDishes.map(dish => `
-                            <div style="background: #3b82f6; color: white; font-size: 0.6rem; padding: 2px 4px; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${dish}">${dish}</div>
-                        `).join('')}
+                        ${dayDishes.map(dish => {
+                            const isCooked = cookedNames.includes(dish);
+                            return `
+                                <div style="background: ${isCooked ? '#10b981' : '#3b82f6'}; color: white; font-size: 0.6rem; padding: 2px 4px; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 2px; ${isCooked ? 'opacity: 0.85;' : ''}" title="${dish}${isCooked ? ' (已完成)' : ''}">
+                                    ${isCooked ? '<span style="font-size: 0.55rem;">✓</span>' : ''}
+                                    <span style="${isCooked ? 'text-decoration: line-through;' : ''}">${dish}</span>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 `;
 
@@ -832,6 +1109,8 @@
                 saveData();
                 renderWeekCalendar();
                 renderTodayMenu(); // 更新今日菜单显示
+                renderTodayShopping(); // 更新采购列表
+                renderTomorrowPrep(); // 更新明天准备
                 alert(`已添加 ${dishName}`);
             } else {
                 alert('该菜品已在当天菜单中');
@@ -914,6 +1193,7 @@
                     ingredients = data.ingredients || [];
                     customDishes = data.customDishes || [];
                     weeklyMenu = data.weeklyMenu || {};
+                    cookedDishes = data.cookedDishes || {};
                     
                     currentUserId = targetUserId;
                     currentSyncCode = code;
@@ -1149,12 +1429,11 @@
             resultDiv.textContent = '思考中...';
 
             try {
-                const ingredientsInfo = ingredients.map(i => `${i.name}(${i.quantity}${i.unit})`).join('、');
-                const fullPrompt = `我的冰箱里现有食材：${ingredientsInfo || '暂无'}
-
-        用户问题：${prompt}
-
-        请根据用户问题给出实用的菜品建议。`;
+                const ingredientsInfo = ingredients.map(i => 
+                    `${i.name}(${i.quantity}${i.unit})`
+                ).join('、');
+                
+                const fullPrompt = `我的冰箱里有已有食材: ${ingredientsInfo || '暂无'}\n\n${prompt}`;
 
                 const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
                     method: 'POST',
@@ -1164,15 +1443,11 @@
                     },
                     body: JSON.stringify({
                         model: 'deepseek-chat',
-                        messages: [{
-                            role: 'system',
-                            content: '你是一个专业的烹饪助手'
-                        }, {
-                            role: 'user',
-                            content: fullPrompt
-                        }],
-                        max_tokens: 2000,
-                        temperature: 0.7
+                        messages: [
+                            { role: 'system', content: '你是专业烹饪助手' },
+                            { role: 'user', content: fullPrompt }
+                        ],
+                        max_tokens: 2000
                     })
                 });
 
@@ -1222,6 +1497,8 @@
             if (document.getElementById('weekCalendar')) {
                 renderWeekCalendar();
                 renderTodayMenu();
+                renderTodayShopping();
+                renderTomorrowPrep();
             }
             
             // 如果在菜品管理页面，也更新菜品列表
