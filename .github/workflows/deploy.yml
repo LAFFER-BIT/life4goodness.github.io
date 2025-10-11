@@ -16,14 +16,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
-      - name: Replace Firebase config in index.html
+      - name: Replace Firebase config in config.js
         run: |
-          sed -i "s/__API_KEY__/${{ secrets.FIREBASE_API_KEY }}/g" index.html
-          sed -i "s/__PROJECT_ID__/${{ secrets.FIREBASE_PROJECT_ID }}/g" index.html
-          sed -i "s/__APP_ID__/${{ secrets.FIREBASE_APP_ID }}/g" index.html
-          sed -i "s/__MSG_SENDER_ID__/${{ secrets.FIREBASE_MSG_SENDER_ID }}/g" index.html
-          sed -i "s/fitness-management4p.firebaseapp.com/fitness-management4p.firebaseapp.com/g" index.html
-          sed -i "s/fitness-management4p.firebasestorage.app/fitness-management4p.firebasestorage.app/g" index.html
+          sed -i "s/__API_KEY__/${{ secrets.FIREBASE_API_KEY }}/g" config.js
+          sed -i "s/__PROJECT_ID__/${{ secrets.FIREBASE_PROJECT_ID }}/g" config.js
+          sed -i "s/__APP_ID__/${{ secrets.FIREBASE_APP_ID }}/g" config.js
+          sed -i "s/__MSG_SENDER_ID__/${{ secrets.FIREBASE_MSG_SENDER_ID }}/g" config.js
       
       - name: Verify replacement
         run: |
