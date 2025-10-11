@@ -625,6 +625,301 @@
             renderAll();
             initFirebase();
         });
+        // ============================================
+        // AI功能实现
+        // ============================================
+
+        // 保存和加载API密钥
+        function loadAPIKeys() {
+            const deepseek = localStorage.getItem('deepseekApiKey');
+            const qwen = localStorage.getItem('qwenApiKey');
+            if (deepseek) document.getElementById('deepseekApiKey').value = deepseek;
+            if (qwen) document.getElementById('qwenApiKey').value = qwen;
+        }
+
+        function saveAPIKey(provider, key) {
+            localStorage.setItem(`${provider}ApiKey`, key);
+        }
+
+        // DeepSeek测试连接
+        async function testDeepSeekConnection() {
+            const apiKey = document.getElementById('deepseekApiKey').value.trim();
+            const statusDiv = document.getElementById('deepseekStatus');
+            
+            if (!apiKey) {
+                showStatus(statusDiv, 'error', '请先输入DeepSeek API密钥');
+                return;
+            }
+            
+            showLoading('测试DeepSeek连接...');
+            
+            try {
+                const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [{
+                            role: 'user',
+                            content: '测试连接'
+                        }],
+                        max_tokens: 10
+                    })
+                });
+                
+                if (response.ok) {
+                    showStatus(statusDiv, 'success', '✅ DeepSeek连接成功！');
+                    saveAPIKey('deepseek', apiKey);
+                } else {
+                    const errorText = await response.text();
+                    showStatus(statusDiv, 'error', `❌ 连接失败: ${response.status}`);
+                }
+            } catch (error) {
+                showStatus(statusDiv, 'error', `❌ 连接错误: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Qwen3-VL测试连接
+        async function testQwenConnection() {
+            const apiKey = document.getElementById('qwenApiKey').value.trim();
+            const statusDiv = document.getElementById('qwenStatus');
+            
+            if (!apiKey) {
+                showStatus(statusDiv, 'error', '请先输入Qwen3-VL API密钥');
+                return;
+            }
+            
+            showLoading('测试Qwen3-VL连接...');
+            
+            try {
+                const response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'qwen-vl-plus',
+                        messages: [{
+                            role: 'user',
+                            content: '测试连接'
+                        }],
+                        max_tokens: 10
+                    })
+                });
+                
+                if (response.ok) {
+                    showStatus(statusDiv, 'success', '✅ Qwen3-VL连接成功！');
+                    saveAPIKey('qwen', apiKey);
+                } else {
+                    const errorText = await response.text();
+                    showStatus(statusDiv, 'error', `❌ 连接失败: ${response.status}`);
+                }
+            } catch (error) {
+                showStatus(statusDiv, 'error', `❌ 连接错误: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function showStatus(statusDiv, type, message) {
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = type === 'success' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)';
+            statusDiv.style.color = type === 'success' ? '#059669' : '#dc2626';
+            statusDiv.style.border = `1px solid ${type === 'success' ? '#bbf7d0' : '#fca5a5'}`;
+            statusDiv.textContent = message;
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // 拍照识别功能
+        function initCamera() {
+            document.getElementById('cameraBtn').onclick = () => {
+                const qwenApiKey = document.getElementById('qwenApiKey').value.trim();
+                if (!qwenApiKey) {
+                    alert('请先在AI助手页面配置Qwen3-VL API密钥');
+                    return;
+                }
+                document.getElementById('cameraInput').click();
+            };
+            
+            document.getElementById('cameraInput').onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    showLoading('正在识别食材...');
+                    try {
+                        const base64 = await fileToBase64(file);
+                        const recognizedItems = await recognizeIngredientsWithQwen(base64);
+                        if (recognizedItems && recognizedItems.length > 0) {
+                            if (confirm(`识别到 ${recognizedItems.length} 种食材，是否添加到库存？`)) {
+                                recognizedItems.forEach(item => addIngredientFromRecognition(item));
+                                saveData();
+                                renderAll();
+                            }
+                        } else {
+                            alert('未能识别到食材');
+                        }
+                    } catch (error) {
+                        alert('识别失败: ' + error.message);
+                    } finally {
+                        hideLoading();
+                    }
+                }
+            };
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = () => reject(new Error('文件读取失败'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function recognizeIngredientsWithQwen(base64Image) {
+            const apiKey = document.getElementById('qwenApiKey').value.trim();
+            
+            const prompt = `请识别这张图片中的食材，严格按照JSON格式返回：
+        [{"name": "食材名称", "quantity": 数量, "unit": "单位", "type": "类别"}]
+
+        要求：
+        1. quantity必须是数字
+        2. unit只能是: 个、根、片、袋、盒、份、g、颗、块中的一个
+        3. type只能是: 蔬菜、肉类、调料、其他中的一个
+        4. 如果无法确定数量，默认设为1
+        5. 只返回JSON数组，不要任何解释文字`;
+
+            const response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'qwen-vl-plus',
+                    messages: [{
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: prompt },
+                            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+                        ]
+                    }],
+                    max_tokens: 500
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API请求失败: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const resultText = data.choices[0].message.content.trim();
+            
+            // 清理markdown格式
+            const cleanedText = resultText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+            const parsed = JSON.parse(cleanedText);
+            
+            return Array.isArray(parsed) ? parsed : [];
+        }
+
+        function addIngredientFromRecognition(item) {
+            const existing = ingredients.find(i => i.name === item.name && i.unit === item.unit);
+            if (existing) {
+                existing.quantity += item.quantity;
+            } else {
+                ingredients.push({
+                    id: Date.now() + Math.random(),
+                    name: item.name,
+                    type: item.type || '其他',
+                    quantity: item.quantity,
+                    unit: item.unit
+                });
+            }
+        }
+
+        // AI对话功能
+        async function askAI() {
+            const apiKey = document.getElementById('deepseekApiKey').value.trim();
+            const prompt = document.getElementById('aiPrompt').value.trim();
+            
+            if (!apiKey) {
+                alert('请先配置DeepSeek API密钥');
+                return;
+            }
+            if (!prompt) {
+                alert('请输入你的问题');
+                return;
+            }
+
+            const resultDiv = document.getElementById('aiResult');
+            const aiIcon = document.getElementById('aiIcon');
+            
+            aiIcon.textContent = '⏳';
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = '正在思考中...';
+
+            try {
+                const ingredientsInfo = ingredients.map(i => `${i.name}(${i.quantity}${i.unit})`).join('、');
+                const fullPrompt = `我的冰箱里现有食材：${ingredientsInfo || '暂无'}
+
+        用户问题：${prompt}
+
+        请根据用户问题给出实用的菜品建议。`;
+
+                const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [{
+                            role: 'system',
+                            content: '你是一个专业的烹饪助手'
+                        }, {
+                            role: 'user',
+                            content: fullPrompt
+                        }],
+                        max_tokens: 2000,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status}`);
+                }
+
+                const data = await response.json();
+                resultDiv.textContent = data.choices[0].message.content;
+                saveAPIKey('deepseek', apiKey);
+
+            } catch (error) {
+                resultDiv.textContent = `请求失败: ${error.message}`;
+            } finally {
+                aiIcon.textContent = '🤖';
+            }
+        }
+
+        // ============================================
+        // 添加事件监听器
+        // ============================================
+        document.getElementById('testDeepSeekBtn').onclick = testDeepSeekConnection;
+        document.getElementById('testQwenBtn').onclick = testQwenConnection;
+        document.getElementById('askAI').onclick = askAI;
+
+        // 初始化
+        loadAPIKeys();
+        initCamera();
     </script>
+    
 </body>
 </html>
