@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能冰箱管理系统</title>
+    <title>智能食材管理系统</title>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -133,7 +133,7 @@
 
     <div class="container">
         <div class="header">
-            <h1>🧊 智能冰箱管理系统</h1>
+            <h1>🧊 智能食材管理系统</h1>
             <p>管理您的食材库存,获取智能菜品推荐和AI烹饪建议</p>
             <div id="syncIndicator" class="sync-indicator offline" onclick="openSyncModal()">
                 <div class="sync-dot gray"></div>
@@ -176,6 +176,10 @@
                                 <option value="份">份</option>
                                 <option value="个">个</option>
                                 <option value="根">根</option>
+                                <option value="桶">桶</option>
+                                <option value="袋">袋</option>
+                                <option value="颗">颗</option>
+                                <option value="块">块</option>
                                 <option value="g">g</option>
                             </select>
                             <button id="addBtn" class="btn btn-primary">➕ 添加</button>
@@ -261,6 +265,10 @@
                             <option value="份">份</option>
                             <option value="个">个</option>
                             <option value="根">根</option>
+                            <option value="桶">桶</option>
+                            <option value="袋">袋</option>
+                            <option value="颗">颗</option>
+                            <option value="块">块</option>
                             <option value="g">g</option>
                         </select>
                     </div>
@@ -274,7 +282,7 @@
                         <h2 class="card-title">✏️ 管理菜品库</h2>
                         <div style="font-size: 0.75rem; color: #6b7280;">共 <span id="dishCount">0</span> 个</div>
                     </div>
-                    <div id="manageDishList" style="max-height: 400px; overflow-y: auto;">
+                    <div id="manageDishList" style="overflow-y: auto;">
                         <div class="empty-message">加载中...</div>
                     </div>
                 </div>
@@ -1375,7 +1383,7 @@
 
         要求：
         1. quantity必须是数字
-        2. unit只能是: 个、根、片、袋、盒、份、g、颗、块中的一个
+        2. unit只能是: 个、根、片、袋、盒、份、g、颗、块、桶中的一个
         3. type只能是: 蔬菜、肉类、调料、其他中的一个
         4. 如果无法确定数量，默认设为1
         5. 只返回JSON数组，不要任何解释文字`;
