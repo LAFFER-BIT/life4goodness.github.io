@@ -315,7 +315,7 @@
                 </div>
 
                 <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                    <textarea id="aiPrompt" class="textarea" placeholder="💬 向DeepSeek描述需求..." style="min-height: 120px; background: white; color: #1f2937;"></textarea>
+                    <textarea id="aiPrompt" class="textarea" placeholder="💬 向DeepSeek描述烹饪需求，例如：制作一道美味的红烧排骨，将优先按已有食材进行推荐，并给出详细步骤。" style="min-height: 120px; background: white; color: #1f2937;"></textarea>
                     <button id="askAI" class="btn btn-success" style="margin-top: 12px; padding: 12px 24px;">
                         <span id="aiIcon">🤖</span> 询问AI
                     </button>
@@ -343,7 +343,7 @@
         let tempDishIngredients = [];
 
         const defaultDishes = [
-            { id: 'default_1', name: '葱油焖鸡', description: '1. 鸡块提前腌制\n2. 倒入鸡块翻炒\n3. 加入调料翻炒均匀出锅', ingredients: [{ name: '鸡块', quantity: 1, unit: '份' }, { name: '姜', quantity: 0.5, unit: '个' }, { name: '葱', quantity: 1, unit: '根' }] },
+            { id: 'default_1', name: '葱油焖鸡', description: '1. 鸡块提前腌制\n2. 倒入鸡块翻炒\n3. 加入调料翻炒均匀出锅', ingredients: [{ name: '鸡块', quantity: 1, unit: '份' }, { name: '葱', quantity: 1, unit: '根' }] },
             { id: 'default_2', name: '秋葵炒素肠', description: '1. 秋葵切片清洗\n2. 素肠切片\n3. 热锅炒青椒\n4. 加秋葵素肠炒匀', ingredients: [{ name: '秋葵', quantity: 1, unit: '份' }, { name: '素肠', quantity: 1, unit: '份' },  { name: '青椒', quantity: 1, unit: '个' }] }
         ];
 
@@ -1452,7 +1452,7 @@
                     body: JSON.stringify({
                         model: 'deepseek-chat',
                         messages: [
-                            { role: 'system', content: '你是专业烹饪助手' },
+                            { role: 'system', content: '你是专业烹饪助手，请根据用户的冰箱食材和提出的需求，按照时下的季节和流行趋势提供符合当前季节的菜谱建议和详细烹饪方式。' },
                             { role: 'user', content: fullPrompt }
                         ],
                         max_tokens: 2000
@@ -1550,11 +1550,11 @@
                             </div>
                             ${dish.description ? `
                                 <div style="font-size: 0.875rem; color: #374151; background: #f8fafc; padding: 8px; border-radius: 4px; margin-top: 8px; border-left: 3px solid #3b82f6; white-space: pre-line;">
-                                    ${dish.description}
+                                    ${dish.description.trim()}
                                 </div>
                             ` : ''}
                             <div style="display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 500; margin-top: 8px; ${isDefault ? 'background: #e0e7ff; color: #3730a3;' : 'background: #fef3c7; color: #92400e;'}">
-                                ${isDefault ? '🔒 系统预置菜品' : '🔧 自定义菜品'}
+                                ${isDefault ? '🔒 预置菜品' : '🔧 自定义菜品'}
                             </div>
                         </div>
                     `;
