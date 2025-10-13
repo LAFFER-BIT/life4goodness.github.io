@@ -1550,7 +1550,7 @@
                             </div>
                             ${dish.description ? `
                                 <div style="font-size: 0.875rem; color: #374151; background: #f8fafc; padding: 8px; border-radius: 4px; margin-top: 8px; border-left: 3px solid #3b82f6; white-space: pre-line;">
-                                    ${dish.description.trim()}
+                                    ${dish.description.replace(/^\s*\n/, '').trim()}
                                 </div>
                             ` : ''}
                             <div style="display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 500; margin-top: 8px; ${isDefault ? 'background: #e0e7ff; color: #3730a3;' : 'background: #fef3c7; color: #92400e;'}">
