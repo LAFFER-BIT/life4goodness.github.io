@@ -2,13 +2,10 @@
 window.APP_CONFIG = {
   production: {
     firebase: {
-      apiKey: "__API_KEY__",
-      authDomain: "fitness-management4p.firebaseapp.com",            // 例如 your-project.firebaseapp.com
-      projectId: "__PROJECT_ID__",
-      storageBucket: "fitness-management4p.firebasestorage.app", // ✅ 正确的存储桶域名
-      messagingSenderId: "__MSG_SENDER_ID__",
-      appId: "__APP_ID__",
-      enabled: true
+        apiKey: "AIzaSyDmLT56NhPS7waFqssx9YPlqkB-eGFbOQw",
+        projectId: "fitness-management4p",
+        appId: "1:752371346113:web:9abbf22bddba5e77364240",
+        enabled: true
 
     },
     leancloud: {
