@@ -7,7 +7,9 @@ window.APP_CONFIG = {
       projectId: "__PROJECT_ID__",
       storageBucket: "fitness-management4p.firebasestorage.app", // ✅ 正确的存储桶域名
       messagingSenderId: "__MSG_SENDER_ID__",
-      appId: "__APP_ID__"
+      appId: "__APP_ID__",
+      enabled: true
+
     },
     leancloud: {
         appId: "U5uEmTjolCTyItwSg6ALj9AV-gzGzoHsz",
