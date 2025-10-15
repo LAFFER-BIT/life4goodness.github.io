@@ -8,6 +8,13 @@ window.APP_CONFIG = {
       storageBucket: "fitness-management4p.firebasestorage.app", // ✅ 正确的存储桶域名
       messagingSenderId: "__MSG_SENDER_ID__",
       appId: "__APP_ID__"
+    },
+    leancloud: {
+        appId: "U5uEmTjolCTyItwSg6ALj9AV-gzGzoHsz",
+        appKey: "dCcxXHLYUwAUSu7S7KVBEMuz",
+        serverURL: "https://u5uemtjo.lc-cn-n1-shared.com",
+        enabled: true
+    },
+    defaultSync: 'auto'
     }
-  }
 };
