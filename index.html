@@ -140,12 +140,49 @@
         </div>
 
         <div class="tabs">
-            <button class="tab-button active" onclick="switchTab('ingredients')">🥬 食材管理</button>
             <button class="tab-button" onclick="switchTab('menu')">📅 本周菜单</button>
+            <button class="tab-button active" onclick="switchTab('ingredients')">🥬 食材管理</button>
             <button class="tab-button" onclick="switchTab('manage')">📋 菜品库</button>
             <button class="tab-button" onclick="switchTab('ai')">🤖 AI助手</button>
         </div>
-
+        
+        <!-- 本周菜单 -->
+        <div id="menu-tab" class="tab-content">
+            <div class="main-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📋 今日信息</h2>
+                        <div id="currentDate" style="font-size: 0.85rem; color: #6b7280;"></div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <h3 style="font-size: 1rem; color: #374151; margin-bottom: 8px;">🍽️ 当天菜单</h3>
+                        <div id="todayMenu" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px; min-height: 50px;">
+                            <div class="empty-message" style="padding: 5px;">暂无菜品安排</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📅 本周菜单规划</h2>
+                        <div style="display: flex; gap: 8px;">
+                            <button id="prevWeekBtn" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 8px;">◀ 上周</button>
+                            <button id="nextWeekBtn" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 8px;">下周 ▶</button>
+                        </div>
+                    </div>
+                    <div id="weekCalendar" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 15px;"></div>
+                    <div style="background: #f8fafc; border-radius: 6px; padding: 12px;">
+                        <h4 style="font-size: 0.9rem; margin-bottom: 8px;">快速添加到选中日期</h4>
+                        <div style="display: flex; gap: 6px;">
+                            <select id="quickDishSelect" class="select" style="flex: 1;"><option value="">选择菜品...</option></select>
+                            <button id="quickAddBtn" class="btn btn-primary">➕ 添加</button>
+                        </div>
+                        <div id="selectedDateInfo" style="font-size: 0.8rem; color: #6b7280; margin-top: 8px;">请先选择日期</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+       
         <!-- 食材管理 -->
         <div id="ingredients-tab" class="tab-content active">
             <div class="main-grid">
@@ -204,43 +241,6 @@
                     <h2 class="card-title">📦 食材分类库存</h2>
                     <div id="ingredientsByCategory" style="flex: 1; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; background: #fafafa;">
                         <div class="empty-message">暂无食材</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 本周菜单 -->
-        <div id="menu-tab" class="tab-content">
-            <div class="main-grid">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">📋 今日信息</h2>
-                        <div id="currentDate" style="font-size: 0.85rem; color: #6b7280;"></div>
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <h3 style="font-size: 1rem; color: #374151; margin-bottom: 8px;">🍽️ 当天菜单</h3>
-                        <div id="todayMenu" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px; min-height: 50px;">
-                            <div class="empty-message" style="padding: 5px;">暂无菜品安排</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">📅 本周菜单规划</h2>
-                        <div style="display: flex; gap: 8px;">
-                            <button id="prevWeekBtn" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 8px;">◀ 上周</button>
-                            <button id="nextWeekBtn" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 8px;">下周 ▶</button>
-                        </div>
-                    </div>
-                    <div id="weekCalendar" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 15px;"></div>
-                    <div style="background: #f8fafc; border-radius: 6px; padding: 12px;">
-                        <h4 style="font-size: 0.9rem; margin-bottom: 8px;">快速添加到选中日期</h4>
-                        <div style="display: flex; gap: 6px;">
-                            <select id="quickDishSelect" class="select" style="flex: 1;"><option value="">选择菜品...</option></select>
-                            <button id="quickAddBtn" class="btn btn-primary">➕ 添加</button>
-                        </div>
-                        <div id="selectedDateInfo" style="font-size: 0.8rem; color: #6b7280; margin-top: 8px;">请先选择日期</div>
                     </div>
                 </div>
             </div>
