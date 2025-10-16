@@ -84,10 +84,27 @@
         .status-indicator { padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; margin-top: 10px; display: none; }
         .status-success { background: rgba(34,197,94,0.2); color: #059669; border: 1px solid #bbf7d0; }
         .status-error { background: rgba(239,68,68,0.2); color: #dc2626; border: 1px solid #fca5a5; }
-        @media (max-width: 767px) { 
-            .sync-indicator { position: static; margin: 10px auto; }
-            .main-grid { grid-template-columns: 1fr; }
+        @media (max-width: 767px) {.sync-indicator { position: static; margin: 10px auto; }.main-grid { grid-template-columns: 1fr; }}
+        .voice-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            border: none; 
+            border-radius: 8px; 
+            font-size: 1rem; 
+            font-weight: 600; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 8px; 
+            margin-bottom: 15px; 
+            transition: all 0.2s; 
         }
+        .voice-btn:hover {transform: translateY(-1px); box-shadow: 0 4px 8px rgba(139,92,246,0.3);}
+        .recording-active {animation: pulse-red 1.5s infinite;}
+        @keyframes pulse-red { 0%, 100% { background: #ef4444; }   50% { background: #dc2626; } }
     </style>
 </head>
 <body>
@@ -126,6 +143,68 @@
         <div class="loading-content">
             <div class="loading-spinner"></div>
             <div id="loadingText">处理中...</div>
+        </div>
+    </div>
+
+    <!-- 新增语音识别模态框 -->
+    <div id="voiceModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2 style="margin-bottom: 24px; color: #1f2937; font-weight: 700;">🎤 语音识别食材</h2>
+            
+            <div id="voiceSection">
+                <!-- 录音控制区 -->
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div id="recordingStatus" style="margin-bottom: 20px; padding: 15px; background: #f3f4f6; border-radius: 8px; min-height: 60px; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: #6b7280;">准备录音...</span>
+                    </div>
+                    
+                    <div id="recordingVisualizer" style="height: 60px; background: #1f2937; border-radius: 8px; margin-bottom: 20px; display: none; position: relative; overflow: hidden;">
+                        <canvas id="visualizerCanvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        <button id="startRecordBtn" class="btn btn-primary" style="padding: 12px 24px; font-size: 1rem;">
+                            🔴 开始录音
+                        </button>
+                        <button id="stopRecordBtn" class="btn btn-danger" style="padding: 12px 24px; font-size: 1rem; display: none;">
+                            ⏹️ 停止录音
+                        </button>
+                        <button id="playRecordBtn" class="btn btn-success" style="padding: 12px 24px; font-size: 1rem; display: none;">
+                            ▶️ 播放录音
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 识别结果区 -->
+                <div id="recognitionResult" style="display: none;">
+                    <h3 style="margin-bottom: 12px; color: #374151;">识别结果：</h3>
+                    <div id="recognizedText" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; min-height: 60px; margin-bottom: 12px;"></div>
+                    
+                    <div id="parsedIngredients" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 12px; margin-bottom: 12px; display: none;">
+                        <h4 style="margin-bottom: 8px; color: #059669;">解析到的食材：</h4>
+                        <div id="ingredientsList"></div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px;">
+                        <button id="confirmAddBtn" class="btn btn-success" style="flex: 1; display: none;">
+                            ✅ 添加到库存
+                        </button>
+                        <button id="retryRecordBtn" class="btn btn-secondary" style="flex: 1;">
+                            🔄 重新录音
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 使用提示 -->
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin-top: 20px;">
+                <div style="font-weight: 600; color: #92400e; margin-bottom: 4px;">💡 使用提示：</div>
+                <div style="font-size: 0.85rem; color: #78350f; line-height: 1.5;">
+                    请清晰地说出食材名称和数量，例如："西红柿3个，土豆2斤，鸡蛋一打，青椒500克"
+                </div>
+            </div>
+            
+            <button id="closeVoiceModalBtn" class="btn btn-secondary" style="width: 100%; margin-top: 20px;">关闭</button>
         </div>
     </div>
 
@@ -192,7 +271,9 @@
                         <button id="clearBtn" class="btn btn-clear" style="display: none;">清空</button>
                     </div>
                     
+                    <!-- 在 cameraBtn 后面新添加语音按钮 -->
                     <button id="cameraBtn" class="camera-btn">📷 拍照识别食材</button>
+                    <button id="voiceBtn" class="voice-btn">🎤 语音导入食材</button>
                     <input type="file" id="cameraInput" style="display: none;" accept="image/*">
                     
                     <div class="form-group">
@@ -338,6 +419,394 @@
         let selectedDate = null;
         let tempDishIngredients = [];
         let liveQuery = null;
+
+        // ============ 语音识别功能 ============
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let audioBlob = null;
+        let audioUrl = null;
+        let isRecording = false;
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let animationId = null;
+
+        function initVoiceRecognition() {
+            // 主按钮点击事件
+            document.getElementById('voiceBtn').onclick = () => {
+                const apiKey = localStorage.getItem('qwenApiKey');
+                if (!apiKey) {
+                    alert('请先配置Qwen3-VL API密钥（语音识别使用相同密钥）');
+                    switchTab('ai');
+                    return;
+                }
+                openVoiceModal();
+            };
+            
+            // 开始录音
+            document.getElementById('startRecordBtn').onclick = startRecording;
+            
+            // 停止录音
+            document.getElementById('stopRecordBtn').onclick = stopRecording;
+            
+            // 播放录音
+            document.getElementById('playRecordBtn').onclick = playRecording;
+            
+            // 重新录音
+            document.getElementById('retryRecordBtn').onclick = () => {
+                resetVoiceModal();
+            };
+            
+            // 确认添加
+            document.getElementById('confirmAddBtn').onclick = confirmAddIngredients;
+            
+            // 关闭模态框
+            document.getElementById('closeVoiceModalBtn').onclick = () => {
+                stopRecording();
+                closeVoiceModal();
+            };
+        }
+
+        function openVoiceModal() {
+            document.getElementById('voiceModal').classList.add('show');
+            resetVoiceModal();
+        }
+
+        function closeVoiceModal() {
+            document.getElementById('voiceModal').classList.remove('show');
+            if (audioUrl) {
+                URL.revokeObjectURL(audioUrl);
+                audioUrl = null;
+            }
+        }
+
+        function resetVoiceModal() {
+            document.getElementById('recordingStatus').innerHTML = '<span style="color: #6b7280;">准备录音...</span>';
+            document.getElementById('recognitionResult').style.display = 'none';
+            document.getElementById('startRecordBtn').style.display = 'inline-block';
+            document.getElementById('stopRecordBtn').style.display = 'none';
+            document.getElementById('playRecordBtn').style.display = 'none';
+            document.getElementById('recordingVisualizer').style.display = 'none';
+            audioChunks = [];
+            audioBlob = null;
+            if (audioUrl) {
+                URL.revokeObjectURL(audioUrl);
+                audioUrl = null;
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // 创建MediaRecorder
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    // 显示播放按钮
+                    document.getElementById('playRecordBtn').style.display = 'inline-block';
+                    
+                    // 停止音频可视化
+                    if (animationId) {
+                        cancelAnimationFrame(animationId);
+                    }
+                    
+                    // 自动开始识别
+                    await recognizeVoice();
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                
+                // 更新UI
+                document.getElementById('recordingStatus').innerHTML = '<span style="color: #dc2626; font-weight: 600;">🔴 正在录音...</span>';
+                document.getElementById('startRecordBtn').style.display = 'none';
+                document.getElementById('stopRecordBtn').style.display = 'inline-block';
+                
+                // 启动音频可视化
+                startAudioVisualization(stream);
+                
+            } catch (error) {
+                console.error('无法访问麦克风:', error);
+                alert('无法访问麦克风，请检查权限设置');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                
+                document.getElementById('recordingStatus').innerHTML = '<span style="color: #059669;">录音完成</span>';
+                document.getElementById('stopRecordBtn').style.display = 'none';
+                document.getElementById('recordingVisualizer').style.display = 'none';
+            }
+        }
+
+        function playRecording() {
+            if (audioUrl) {
+                const audio = new Audio(audioUrl);
+                audio.play();
+            }
+        }
+
+        function startAudioVisualization(stream) {
+            document.getElementById('recordingVisualizer').style.display = 'block';
+            
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            microphone = audioContext.createMediaStreamSource(stream);
+            
+            analyser.fftSize = 256;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            microphone.connect(analyser);
+            
+            const canvas = document.getElementById('visualizerCanvas');
+            const canvasCtx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            function draw() {
+                animationId = requestAnimationFrame(draw);
+                
+                analyser.getByteFrequencyData(dataArray);
+                
+                canvasCtx.fillStyle = '#1f2937';
+                canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                const barWidth = (canvas.width / bufferLength) * 2.5;
+                let barHeight;
+                let x = 0;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    barHeight = (dataArray[i] / 255) * canvas.height;
+                    
+                    const r = barHeight + 25 * (i / bufferLength);
+                    const g = 250 * (i / bufferLength);
+                    const b = 50;
+                    
+                    canvasCtx.fillStyle = `rgb(${r},${g},${b})`;
+                    canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                    
+                    x += barWidth + 1;
+                }
+            }
+            
+            draw();
+        }
+
+        async function recognizeVoice() {
+            if (!audioBlob) return;
+            
+            showLoading('正在识别语音...');
+            
+            try {
+                // 转换为base64
+                const reader = new FileReader();
+                const base64Audio = await new Promise((resolve, reject) => {
+                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(audioBlob);
+                });
+                
+                const apiKey = localStorage.getItem('qwenApiKey');
+                
+                // 调用Qwen ASR API
+                const response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'qwen3-asr-flash',
+                        messages: [{
+                            role: 'user',
+                            content: [
+                                {
+                                    type: 'audio',
+                                    audio: `data:audio/webm;base64,${base64Audio}`
+                                },
+                                {
+                                    type: 'text',
+                                    text: '请识别音频中提到的食材和数量，并以JSON格式返回：[{"name":"食材名","quantity":数量,"unit":"单位"}]'
+                                }
+                            ]
+                        }],
+                        max_tokens: 500
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('API请求失败');
+                }
+                
+                const data = await response.json();
+                const recognizedText = data.choices[0].message.content;
+                
+                // 显示识别结果
+                document.getElementById('recognitionResult').style.display = 'block';
+                document.getElementById('recognizedText').textContent = recognizedText;
+                
+                // 尝试解析食材
+                parseIngredients(recognizedText);
+                
+            } catch (error) {
+                console.error('语音识别失败:', error);
+                alert('语音识别失败: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function parseIngredients(text) {
+            try {
+                // 尝试解析JSON格式
+                let parsedItems = [];
+                
+                // 先尝试直接解析JSON
+                try {
+                    const jsonMatch = text.match(/\[.*\]/s);
+                    if (jsonMatch) {
+                        parsedItems = JSON.parse(jsonMatch[0]);
+                    }
+                } catch (e) {
+                    // 如果不是JSON，尝试智能解析文本
+                    parsedItems = parseTextToIngredients(text);
+                }
+                
+                if (parsedItems.length > 0) {
+                    window.tempVoiceIngredients = parsedItems;
+                    displayParsedIngredients(parsedItems);
+                    document.getElementById('confirmAddBtn').style.display = 'block';
+                } else {
+                    document.getElementById('parsedIngredients').style.display = 'none';
+                    document.getElementById('confirmAddBtn').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('解析失败:', error);
+                document.getElementById('parsedIngredients').style.display = 'none';
+            }
+        }
+
+        function parseTextToIngredients(text) {
+            const ingredients = [];
+            const patterns = [
+                /(\S+?)(\d+(?:\.\d+)?)\s*(个|斤|两|克|千克|公斤|袋|包|瓶|盒|份|根|棵|把)/g,
+                /(\d+(?:\.\d+)?)\s*(个|斤|两|克|千克|公斤|袋|包|瓶|盒|份|根|棵|把)\s*(\S+)/g
+            ];
+            
+            for (const pattern of patterns) {
+                let match;
+                while ((match = pattern.exec(text)) !== null) {
+                    let name, quantity, unit;
+                    
+                    if (match[1] && isNaN(match[1])) {
+                        name = match[1];
+                        quantity = parseFloat(match[2]);
+                        unit = match[3];
+                    } else {
+                        quantity = parseFloat(match[1]);
+                        unit = match[2];
+                        name = match[3];
+                    }
+                    
+                    // 单位转换
+                    const unitMap = {
+                        '斤': '斤',
+                        '两': '两',
+                        '克': 'g',
+                        '千克': 'kg',
+                        '公斤': 'kg',
+                        '个': '个',
+                        '袋': '袋',
+                        '包': '袋',
+                        '瓶': '瓶',
+                        '盒': '盒',
+                        '份': '份',
+                        '根': '根',
+                        '棵': '棵',
+                        '把': '把'
+                    };
+                    
+                    if (name && quantity && unit) {
+                        ingredients.push({
+                            name: name,
+                            quantity: quantity,
+                            unit: unitMap[unit] || unit,
+                            type: guessIngredientType(name)
+                        });
+                    }
+                }
+            }
+            
+            return ingredients;
+        }
+
+        function guessIngredientType(name) {
+            const vegetables = ['菜', '瓜', '豆', '椒', '葱', '蒜', '姜', '萝', '笋', '芹', '白菜', '青菜'];
+            const meats = ['肉', '鸡', '鸭', '鱼', '虾', '牛', '羊', '猪'];
+            
+            for (const veg of vegetables) {
+                if (name.includes(veg)) return '蔬菜';
+            }
+            for (const meat of meats) {
+                if (name.includes(meat)) return '肉类';
+            }
+            
+            return '其他';
+        }
+
+        function displayParsedIngredients(items) {
+            const container = document.getElementById('ingredientsList');
+            container.innerHTML = items.map(item => `
+                <div style="padding: 8px; background: white; border-radius: 4px; margin-bottom: 6px; display: flex; justify-content: space-between;">
+                    <span>${item.name}</span>
+                    <span style="color: #059669; font-weight: 500;">${item.quantity}${item.unit}</span>
+                </div>
+            `).join('');
+            
+            document.getElementById('parsedIngredients').style.display = 'block';
+        }
+
+        function confirmAddIngredients() {
+            if (!window.tempVoiceIngredients || window.tempVoiceIngredients.length === 0) return;
+            
+            window.tempVoiceIngredients.forEach(item => {
+                const existing = ingredients.find(i => 
+                    i.name === item.name && i.unit === item.unit
+                );
+                
+                if (existing) {
+                    existing.quantity += item.quantity;
+                } else {
+                    ingredients.push({
+                        id: Date.now() + Math.random(),
+                        name: item.name,
+                        type: item.type || '其他',
+                        quantity: item.quantity,
+                        unit: item.unit
+                    });
+                }
+            });
+            
+            saveData();
+            renderAll();
+            closeVoiceModal();
+            alert(`✅ 成功添加 ${window.tempVoiceIngredients.length} 种食材！`);
+            window.tempVoiceIngredients = [];
+        }
 
         const defaultDishes = [
             { id: 'default_1', name: '葱油焖鸡', description: '1. 鸡块提前腌制\n2. 倒入鸡块翻炒\n3. 加入调料翻炒均匀出锅', ingredients: [{ name: '鸡块', quantity: 1, unit: '份' }, { name: '葱', quantity: 1, unit: '根' }] },
@@ -1357,7 +1826,8 @@
                             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
                         ]
                     }],
-                    max_tokens: 500
+                    max_tokens: 500,
+                    vl_high_resolution_images: false // 使用标准分辨率以节省资源
                 })
             });
 
@@ -1643,8 +2113,9 @@
             renderAll();
             renderManageDishes();
             loadAPIKeys();
-            initCamera();
-            
+            initCamera();// 初始化摄像头功能
+            initVoiceRecognition(); // 初始化语言识别
+
             try {
                 initWeekCalendar();
             } catch (e) {
