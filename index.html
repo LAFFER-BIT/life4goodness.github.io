@@ -995,6 +995,7 @@
                 } else {
                     // 创建匿名用户
                     currentUser = await AV.User.loginAnonymously();
+                    currentSyncCode = currentUser.get('syncCode') || null;
                     currentUserId = currentUser.id;
                     console.log('✅ 匿名登录成功');
                     await loadSyncCode();
