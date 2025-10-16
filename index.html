@@ -105,6 +105,28 @@
         .voice-btn:hover {transform: translateY(-1px); box-shadow: 0 4px 8px rgba(139,92,246,0.3);}
         .recording-active {animation: pulse-red 1.5s infinite;}
         @keyframes pulse-red { 0%, 100% { background: #ef4444; }   50% { background: #dc2626; } }
+        .login-tab {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6b7280;
+            transition: all 0.2s;
+        }
+        .login-tab.active {
+            background: white;
+            color: #3b82f6;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .login-form {
+            display: none;
+        }
+        .login-form.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -143,6 +165,88 @@
         <div class="loading-content">
             <div class="loading-spinner"></div>
             <div id="loadingText">处理中...</div>
+        </div>
+    </div>
+
+    <!-- 用户登录模态框 -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <h2 style="margin-bottom: 24px; color: #1f2937; font-weight: 700; text-align: center;">
+                👤 用户登录
+            </h2>
+            
+            <!-- 登录方式切换标签 -->
+            <div style="display: flex; background: #f3f4f6; border-radius: 8px; padding: 4px; margin-bottom: 20px;">
+                <button id="phoneLoginTab" class="login-tab active" onclick="switchLoginTab('phone')">
+                    📱 手机登录
+                </button>
+                <button id="syncCodeTab" class="login-tab" onclick="switchLoginTab('sync')">
+                    🔄 同步码
+                </button>
+            </div>
+            
+            <!-- 手机号登录表单 -->
+            <div id="phoneLoginForm" class="login-form active">
+                <div id="loginFormContent">
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 6px; color: #374151; font-weight: 500;">手机号</label>
+                        <input type="tel" id="phoneNumber" class="input" placeholder="请输入手机号" maxlength="11" style="width: 100%; padding: 10px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 6px; color: #374151; font-weight: 500;">密码</label>
+                        <input type="password" id="password" class="input" placeholder="请输入密码" style="width: 100%; padding: 10px;">
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                        <button id="loginBtn" class="btn btn-primary" style="flex: 1; padding: 12px;">
+                            登录
+                        </button>
+                        <button id="registerBtn" class="btn btn-success" style="flex: 1; padding: 12px;">
+                            注册
+                        </button>
+                    </div>
+                    
+                    <div id="loginMessage" class="status-indicator" style="display: none; margin-top: 12px;"></div>
+                </div>
+                
+                <!-- 已登录状态 -->
+                <div id="loggedInInfo" style="display: none;">
+                    <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 20px; text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">✅</div>
+                        <div style="font-weight: 600; color: #059669; margin-bottom: 8px;">已登录</div>
+                        <div id="currentUserPhone" style="font-size: 1.2rem; color: #374151; margin-bottom: 16px;"></div>
+                        <button id="logoutBtn" class="btn btn-danger" style="width: 100%; padding: 10px;">
+                            退出登录
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 同步码表单 -->
+            <div id="syncCodeForm" class="login-form" style="display: none;">
+                <div class="sync-code-display">
+                    <div style="font-size: 1.1rem; margin-bottom: 10px;">您的同步码</div>
+                    <div class="sync-code" id="displaySyncCode2">------</div>
+                    <div style="font-size: 0.9rem; margin-bottom: 16px;">在其他设备输入此码即可同步数据</div>
+                    <button id="copySyncCodeBtn2" class="btn" style="background: white; color: #3b82f6; font-weight: 600; padding: 12px 24px;">
+                        📋 复制同步码
+                    </button>
+                </div>
+                <div style="text-align: center; margin: 20px 0; color: #9ca3af; font-weight: 500;">或</div>
+                <div>
+                    <h3 style="margin-bottom: 14px; color: #374151; font-weight: 600;">输入其他设备的同步码</h3>
+                    <div style="display: flex; gap: 12px;">
+                        <input type="text" id="inputSyncCode2" class="input" placeholder="123456" maxlength="6" 
+                            style="flex: 1; text-align: center; font-size: 1.8rem; letter-spacing: 6px; font-family: 'Courier New', monospace;">
+                        <button id="useSyncCodeBtn2" class="btn btn-success" style="padding: 12px 24px; font-weight: 600;">
+                            🔄 同步
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="closeLoginModalBtn" class="btn btn-secondary" style="width: 100%; margin-top: 20px;">关闭</button>
         </div>
     </div>
 
@@ -212,7 +316,7 @@
         <div class="header">
             <h1>🧊 宝拉芙家庭厨房</h1>
             <p>管理您的食材库存,获取智能菜品推荐和AI烹饪建议</p>
-            <div id="syncIndicator" class="sync-indicator offline" onclick="openSyncModal()">
+            <div id="syncIndicator" class="sync-indicator offline" onclick="openLoginModal()">
                 <div class="sync-dot gray"></div>
                 <span>离线模式</span>
             </div>
@@ -840,6 +944,10 @@
             return null;
         }
 
+        // ============ 用户登录管理 ============
+        let isPhoneLogin = false;
+        let currentUserPhone = null;
+
         async function initLeanCloud() {
             console.log('🚀 开始初始化LeanCloud...');
             
@@ -865,31 +973,32 @@
                 
                 console.log('✅ LeanCloud初始化成功');
                 
-                // 匿名登录或获取当前用户
+                // 检查是否有已登录用户
                 let currentUser = AV.User.current();
-                if (!currentUser) {
-                    currentUser = await AV.User.loginAnonymously();
-                    console.log('✅ 匿名登录成功');
-                }
-                currentUserId = currentUser.id;
-                console.log('✅ 用户ID:', currentUserId);
                 
-                // 获取或创建同步码
-                const SyncCode = AV.Object.extend('SyncCode');
-                const query = new AV.Query(SyncCode);
-                query.equalTo('userId', currentUserId);
-                
-                let syncCodeObj = await query.first();
-                if (syncCodeObj) {
-                    currentSyncCode = syncCodeObj.get('code');
-                    console.log('✅ 获取到同步码:', currentSyncCode);
+                if (currentUser) {
+                    // 已有登录用户
+                    currentUserId = currentUser.id;
+                    
+                    // 检查是否是手机号登录
+                    const username = currentUser.getUsername();
+                    if (/^1[3-9]\d{9}$/.test(username)) {
+                        isPhoneLogin = true;
+                        currentUserPhone = username;
+                        console.log('✅ 手机号用户已登录:', currentUserPhone);
+                        updateSyncIndicator('synced', `已登录: ${currentUserPhone.slice(0, 3)}****${currentUserPhone.slice(-4)}`);
+                    } else {
+                        // 匿名用户或同步码登录
+                        await loadSyncCode();
+                        updateSyncIndicator('synced', '已同步');
+                    }
                 } else {
-                    currentSyncCode = generateSyncCode();
-                    syncCodeObj = new SyncCode();
-                    syncCodeObj.set('userId', currentUserId);
-                    syncCodeObj.set('code', currentSyncCode);
-                    await syncCodeObj.save();
-                    console.log('✅ 创建新同步码:', currentSyncCode);
+                    // 创建匿名用户
+                    currentUser = await AV.User.loginAnonymously();
+                    currentUserId = currentUser.id;
+                    console.log('✅ 匿名登录成功');
+                    await loadSyncCode();
+                    updateSyncIndicator('synced', '已同步');
                 }
                 
                 leanCloudInitialized = true;
@@ -900,13 +1009,344 @@
                 // 监听数据变化
                 listenToDataChanges();
                 
-                updateSyncIndicator('synced', '已同步');
-                
             } catch (error) {
                 console.error('❌ LeanCloud初始化失败:', error);
                 updateSyncIndicator('error', '连接失败');
                 loadLocalData();
                 renderAll();
+            }
+        }
+
+        async function loadSyncCode() {
+            if (!currentUserId) return;
+            
+            const SyncCode = AV.Object.extend('SyncCode');
+            const query = new AV.Query(SyncCode);
+            query.equalTo('userId', currentUserId);
+            
+            let syncCodeObj = await query.first();
+            if (syncCodeObj) {
+                currentSyncCode = syncCodeObj.get('code');
+                console.log('✅ 获取到同步码:', currentSyncCode);
+            } else {
+                currentSyncCode = generateSyncCode();
+                syncCodeObj = new SyncCode();
+                syncCodeObj.set('userId', currentUserId);
+                syncCodeObj.set('code', currentSyncCode);
+                await syncCodeObj.save();
+                console.log('✅ 创建新同步码:', currentSyncCode);
+            }
+        }
+
+        // 手机号登录
+        async function loginWithPhone() {
+            const phone = document.getElementById('phoneNumber').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
+                showLoginMessage('error', '请输入正确的手机号');
+                return;
+            }
+            
+            if (!password || password.length < 6) {
+                showLoginMessage('error', '密码至少6位');
+                return;
+            }
+            
+            showLoading('登录中...');
+            
+            try {
+                const user = await AV.User.logIn(phone, password);
+                currentUserId = user.id;
+                currentUserPhone = phone;
+                isPhoneLogin = true;
+                
+                // 加载用户数据
+                await loadCloudData();
+                listenToDataChanges();
+                
+                showLoginMessage('success', '登录成功！');
+                updateSyncIndicator('synced', `已登录: ${phone.slice(0, 3)}****${phone.slice(-4)}`);
+                
+                // 更新UI
+                showLoggedInState();
+                
+                setTimeout(() => {
+                    document.getElementById('loginModal').classList.remove('show');
+                }, 1000);
+                
+            } catch (error) {
+                console.error('登录失败:', error);
+                if (error.code === 211) {
+                    showLoginMessage('error', '用户名或密码错误');
+                } else {
+                    showLoginMessage('error', '登录失败：' + error.message);
+                }
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 手机号注册
+        async function registerWithPhone() {
+            const phone = document.getElementById('phoneNumber').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
+                showLoginMessage('error', '请输入正确的手机号');
+                return;
+            }
+            
+            if (!password || password.length < 6) {
+                showLoginMessage('error', '密码至少6位');
+                return;
+            }
+            
+            if (!confirm(`确定使用手机号 ${phone} 注册新账号吗？`)) {
+                return;
+            }
+            
+            showLoading('注册中...');
+            
+            try {
+                const user = new AV.User();
+                user.setUsername(phone);
+                user.setPassword(password);
+                user.set('phone', phone);
+                
+                await user.signUp();
+                
+                currentUserId = user.id;
+                currentUserPhone = phone;
+                isPhoneLogin = true;
+                
+                // 如果有本地数据，同步到云端
+                if (ingredients.length > 0 || customDishes.length > 0) {
+                    await syncToCloud();
+                }
+                
+                showLoginMessage('success', '注册成功！已自动登录');
+                updateSyncIndicator('synced', `已登录: ${phone.slice(0, 3)}****${phone.slice(-4)}`);
+                
+                // 更新UI
+                showLoggedInState();
+                
+                setTimeout(() => {
+                    document.getElementById('loginModal').classList.remove('show');
+                }, 1500);
+                
+            } catch (error) {
+                console.error('注册失败:', error);
+                if (error.code === 202) {
+                    showLoginMessage('error', '该手机号已被注册');
+                } else {
+                    showLoginMessage('error', '注册失败：' + error.message);
+                }
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 退出登录
+        async function logout() {
+            if (!confirm('确定要退出登录吗？\n\n退出后将切换到匿名模式')) {
+                return;
+            }
+            
+            try {
+                await AV.User.logOut();
+                
+                // 重新匿名登录
+                const user = await AV.User.loginAnonymously();
+                currentUserId = user.id;
+                currentUserPhone = null;
+                isPhoneLogin = false;
+                
+                // 重新获取同步码
+                await loadSyncCode();
+                
+                updateSyncIndicator('synced', '已同步');
+                showLoginForm();
+                showLoginMessage('success', '已退出登录');
+                
+            } catch (error) {
+                console.error('退出登录失败:', error);
+                showLoginMessage('error', '退出失败：' + error.message);
+            }
+        }
+
+        // UI辅助函数
+        function showLoginMessage(type, message) {
+            const messageDiv = document.getElementById('loginMessage');
+            messageDiv.className = `status-indicator status-${type}`;
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showLoggedInState() {
+            document.getElementById('loginFormContent').style.display = 'none';
+            document.getElementById('loggedInInfo').style.display = 'block';
+            document.getElementById('currentUserPhone').textContent = currentUserPhone;
+        }
+
+        function showLoginForm() {
+            document.getElementById('loginFormContent').style.display = 'block';
+            document.getElementById('loggedInInfo').style.display = 'none';
+        }
+
+        function switchLoginTab(tab) {
+            const phoneTab = document.getElementById('phoneLoginTab');
+            const syncTab = document.getElementById('syncCodeTab');
+            const phoneForm = document.getElementById('phoneLoginForm');
+            const syncForm = document.getElementById('syncCodeForm');
+            
+            if (tab === 'phone') {
+                phoneTab.classList.add('active');
+                syncTab.classList.remove('active');
+                phoneForm.classList.add('active');
+                syncForm.classList.remove('active');
+                
+                // 检查登录状态
+                if (isPhoneLogin && currentUserPhone) {
+                    showLoggedInState();
+                } else {
+                    showLoginForm();
+                }
+            } else {
+                phoneTab.classList.remove('active');
+                syncTab.classList.add('active');
+                phoneForm.classList.remove('active');
+                syncForm.classList.add('active');
+                
+                // 更新同步码显示
+                if (currentSyncCode) {
+                    document.getElementById('displaySyncCode2').textContent = currentSyncCode;
+                }
+            }
+        }
+
+        function openLoginModal() {
+            const modal = document.getElementById('loginModal');
+            modal.classList.add('show');
+            
+            // 根据当前登录状态选择默认标签
+            if (isPhoneLogin) {
+                switchLoginTab('phone');
+            } else {
+                switchLoginTab('sync');
+            }
+        }
+
+        // 修改原有的openSyncModal函数
+        function openSyncModal() {
+            openLoginModal();
+            switchLoginTab('sync');
+        }
+
+        // 添加新的事件监听器
+        document.addEventListener('DOMContentLoaded', () => {
+            // 登录相关事件
+            document.getElementById('loginBtn').onclick = loginWithPhone;
+            document.getElementById('registerBtn').onclick = registerWithPhone;
+            document.getElementById('logoutBtn').onclick = logout;
+            document.getElementById('closeLoginModalBtn').onclick = () => {
+                document.getElementById('loginModal').classList.remove('show');
+            };
+            
+            // 同步码相关（复用原有逻辑）
+            document.getElementById('copySyncCodeBtn2').onclick = () => {
+                if (currentSyncCode) {
+                    navigator.clipboard.writeText(currentSyncCode).then(() => {
+                        alert('✅ 同步码已复制!\n\n' + currentSyncCode);
+                    }).catch(() => {
+                        alert('同步码: ' + currentSyncCode);
+                    });
+                }
+            };
+            
+            document.getElementById('useSyncCodeBtn2').onclick = async () => {
+                const code = document.getElementById('inputSyncCode2').value.trim();
+                
+                if (!leanCloudInitialized) {
+                    alert('云同步未启用');
+                    return;
+                }
+                
+                if (code.length !== 6) {
+                    alert('请输入6位同步码');
+                    return;
+                }
+                
+                // 使用原有的同步逻辑
+                await useSyncCodeWithInput(code);
+            };
+            
+            // 手机号输入格式化
+            document.getElementById('phoneNumber').oninput = (e) => {
+                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 11);
+            };
+            
+            // 回车键登录
+            document.getElementById('password').onkeypress = (e) => {
+                if (e.key === 'Enter') {
+                    loginWithPhone();
+                }
+            };
+        });
+
+        // 新增：使用输入的同步码
+        async function useSyncCodeWithInput(code) {
+            showLoading('正在同步数据...');
+            
+            try {
+                const SyncCode = AV.Object.extend('SyncCode');
+                const query = new AV.Query(SyncCode);
+                query.equalTo('code', code);
+                
+                const codeObj = await query.first();
+                
+                if (!codeObj) {
+                    hideLoading();
+                    alert('❌ 同步码不存在');
+                    return;
+                }
+                
+                const targetUserId = codeObj.get('userId');
+                
+                const UserData = AV.Object.extend('UserData');
+                const dataQuery = new AV.Query(UserData);
+                dataQuery.equalTo('userId', targetUserId);
+                
+                const dataObj = await dataQuery.first();
+                
+                if (dataObj) {
+                    ingredients = dataObj.get('ingredients') || [];
+                    customDishes = dataObj.get('customDishes') || [];
+                    weeklyMenu = dataObj.get('weeklyMenu') || {};
+                    cookedDishes = dataObj.get('cookedDishes') || {};
+                    
+                    currentUserId = targetUserId;
+                    currentSyncCode = code;
+                    
+                    saveData();
+                    renderAll();
+                    
+                    listenToDataChanges();
+                    
+                    document.getElementById('loginModal').classList.remove('show');
+                    alert('✅ 数据同步成功!');
+                } else {
+                    alert('❌ 未找到数据');
+                }
+            } catch (error) {
+                console.error('同步失败:', error);
+                alert('❌ 同步失败: ' + error.message);
+            } finally {
+                hideLoading();
             }
         }
 
