@@ -143,6 +143,7 @@
                 <div class="sync-code-display">
                     <div style="font-size: 1.1rem; margin-bottom: 10px;">您的同步码</div>
                     <div class="sync-code" id="displaySyncCode">------</div>
+                    <span id="displaySyncCode">------</span>
                     <div style="font-size: 0.9rem; margin-bottom: 16px;">在其他设备输入此码即可同步数据</div>
                     <button id="copySyncCodeBtn" class="btn" style="background: white; color: #3b82f6; font-weight: 600; padding: 12px 24px;">📋 复制同步码</button>
                 </div>
@@ -1036,6 +1037,10 @@
                 syncCodeObj.set('code', currentSyncCode);
                 await syncCodeObj.save();
                 console.log('✅ 创建新同步码:', currentSyncCode);
+            }
+
+            if (document.getElementById('displaySyncCode')) {
+                document.getElementById('displaySyncCode').textContent = currentSyncCode || '------';
             }
         }
 
