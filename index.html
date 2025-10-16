@@ -331,7 +331,7 @@
         </div>
         
         <!-- 本周菜单 -->
-        <div id="menu-tab" class="tab-content">
+        <div id="menu-tab" class="tab-content active">
             <div class="main-grid">
                 <div class="card">
                     <div class="card-header">
@@ -368,7 +368,7 @@
         </div>
        
         <!-- 食材管理 -->
-        <div id="ingredients-tab" class="tab-content active">
+        <div id="ingredients-tab" class="tab-content">
             <div class="main-grid">
                 <div class="card" style="display: flex; flex-direction: column; height: 100%;">
                     <div class="card-header">
@@ -1246,8 +1246,8 @@
                 syncForm.classList.add('active');
                 
                 // 更新同步码显示
-                if (currentSyncCode) {
-                    document.getElementById('displaySyncCode2').textContent = currentSyncCode;
+                if (document.getElementById('displaySyncCode2')) {
+                    document.getElementById('displaySyncCode2').textContent = currentSyncCode || '------';
                 }
             }
         }
