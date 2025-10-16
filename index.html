@@ -1086,6 +1086,22 @@
                 hideLoading();
             }
         }
+       
+        // 创建用户配置表（可选）
+        async function saveUserProfile(userId, phone) {
+            try {
+                const UserProfile = AV.Object.extend('UserProfile');
+                const profile = new UserProfile();
+                profile.set('userId', userId);
+                profile.set('phone', phone);
+                profile.set('createdAt', new Date());
+                await profile.save();
+                console.log('用户配置保存成功');
+            } catch (error) {
+                console.error('保存用户配置失败:', error);
+                // 不影响主流程
+            }
+        }
 
         // 手机号注册
         async function registerWithPhone() {
@@ -1112,7 +1128,6 @@
                 const user = new AV.User();
                 user.setUsername(phone);
                 user.setPassword(password);
-                user.set('phone', phone);
                 
                 await user.signUp();
                 
@@ -1120,6 +1135,8 @@
                 currentUserPhone = phone;
                 isPhoneLogin = true;
                 
+                await saveUserProfile(user.id, phone); // 保存用户信息到本地
+
                 // 如果有本地数据，同步到云端
                 if (ingredients.length > 0 || customDishes.length > 0) {
                     await syncToCloud();
