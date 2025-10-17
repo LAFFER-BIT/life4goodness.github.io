@@ -130,7 +130,7 @@
     </style>
 </head>
 <body>
-        <!-- 同步模态框 -->
+    <!-- 同步模态框 -->
     <div id="syncModal" class="modal">
         <div class="modal-content">
             <h2 style="margin-bottom: 24px; color: #1f2937; font-weight: 700;">🔄 设备间数据同步</h2>
@@ -143,14 +143,22 @@
                 <div class="sync-code-display">
                     <div style="font-size: 1.1rem; margin-bottom: 10px;">您的同步码</div>
                     <div class="sync-code" id="displaySyncCode">------</div>
-                    <!-- 删除重复的span元素 -->
+                    <span id="displaySyncCode">------</span>
                     <div style="font-size: 0.9rem; margin-bottom: 16px;">在其他设备输入此码即可同步数据</div>
                     <button id="copySyncCodeBtn" class="btn" style="background: white; color: #3b82f6; font-weight: 600; padding: 12px 24px;">📋 复制同步码</button>
                 </div>
                 <div style="text-align: center; margin: 28px 0; color: #9ca3af; font-weight: 500;">或</div>
             </div>
             
-            <!-- ... 其余代码 ... -->
+            <div>
+                <h3 style="margin-bottom: 14px; color: #374151; font-weight: 600;">输入其他设备的同步码</h3>
+                <div style="display: flex; gap: 12px;">
+                    <input type="text" id="inputSyncCode" class="input" placeholder="123456" maxlength="6" style="flex: 1; text-align: center; font-size: 1.8rem; letter-spacing: 6px; font-family: 'Courier New', monospace;">
+                    <button id="useSyncCodeBtn" class="btn btn-success" style="padding: 12px 24px; font-weight: 600;">🔄 同步</button>
+                </div>
+            </div>
+            
+            <button id="closeSyncModalBtn" class="btn btn-secondary" style="width: 100%; margin-top: 20px; padding: 12px; font-weight: 600;">关闭</button>
         </div>
     </div>
 
@@ -220,10 +228,10 @@
             <div id="syncCodeForm" class="login-form" style="display: none;">
                 <div class="sync-code-display">
                     <div style="font-size: 1.1rem; margin-bottom: 10px;">您的同步码</div>
-                    <div class="sync-code" id="displaySyncCode2">------</div>
-                    <!-- 删除重复的span元素 -->
+                    <div class="sync-code" id="displaySyncCode">------</div>
+                    <span id="displaySyncCode">------</span>
                     <div style="font-size: 0.9rem; margin-bottom: 16px;">在其他设备输入此码即可同步数据</div>
-                    <button id="copySyncCodeBtn2" class="btn" style="background: white; color: #3b82f6; font-weight: 600; padding: 12px 24px;">
+                    <button id="copySyncCodeBtn" class="btn" style="background: white; color: #3b82f6; font-weight: 600; padding: 12px 24px;">
                         📋 复制同步码
                     </button>
                 </div>
@@ -1305,7 +1313,7 @@
             };
             
             // 同步码相关（复用原有逻辑）
-            document.getElementById('copySyncCodeBtn').onclick = () => {
+            document.getElementById('copySyncCodeBtn2').onclick = () => {
                 if (currentSyncCode) {
                     navigator.clipboard.writeText(currentSyncCode).then(() => {
                         alert('✅ 同步码已复制!\n\n' + currentSyncCode);
