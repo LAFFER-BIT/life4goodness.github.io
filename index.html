@@ -130,7 +130,7 @@
     </style>
 </head>
 <body>
-    <!-- 同步模态框 -->
+<!-- 同步模态框 -->
     <div id="syncModal" class="modal">
         <div class="modal-content">
             <h2 style="margin-bottom: 24px; color: #1f2937; font-weight: 700;">🔄 设备间数据同步</h2>
@@ -143,7 +143,7 @@
                 <div class="sync-code-display">
                     <div style="font-size: 1.1rem; margin-bottom: 10px;">您的同步码</div>
                     <div class="sync-code" id="displaySyncCode">------</div>
-                    <span id="displaySyncCode">------</span>
+                    <!-- 删除重复的span -->
                     <div style="font-size: 0.9rem; margin-bottom: 16px;">在其他设备输入此码即可同步数据</div>
                     <button id="copySyncCodeBtn" class="btn" style="background: white; color: #3b82f6; font-weight: 600; padding: 12px 24px;">📋 复制同步码</button>
                 </div>
@@ -228,10 +228,10 @@
             <div id="syncCodeForm" class="login-form" style="display: none;">
                 <div class="sync-code-display">
                     <div style="font-size: 1.1rem; margin-bottom: 10px;">您的同步码</div>
-                    <div class="sync-code" id="displaySyncCode">------</div>
-                    <span id="displaySyncCode">------</span>
+                    <div class="sync-code" id="displaySyncCode2">------</div>
+                    <!-- 删除重复的span和重复的id -->
                     <div style="font-size: 0.9rem; margin-bottom: 16px;">在其他设备输入此码即可同步数据</div>
-                    <button id="copySyncCodeBtn" class="btn" style="background: white; color: #3b82f6; font-weight: 600; padding: 12px 24px;">
+                    <button id="copySyncCodeBtn2" class="btn" style="background: white; color: #3b82f6; font-weight: 600; padding: 12px 24px;">
                         📋 复制同步码
                     </button>
                 </div>
@@ -241,7 +241,7 @@
                     <div style="display: flex; gap: 12px;">
                         <input type="text" id="inputSyncCode2" class="input" placeholder="123456" maxlength="6" 
                             style="flex: 1; text-align: center; font-size: 1.8rem; letter-spacing: 6px; font-family: 'Courier New', monospace;">
-                        <button id="useSyncCodeBtn" class="btn btn-success" style="padding: 12px 24px; font-weight: 600;">
+                        <button id="useSyncCodeBtn2" class="btn btn-success" style="padding: 12px 24px; font-weight: 600;">
                             🔄 同步
                         </button>
                     </div>
@@ -1021,8 +1021,10 @@
         }
 
         async function loadSyncCode() {
-            if (!currentUserId) return;
-            
+            if (!currentUserId) {
+                console.log('没有用户ID，无法加载同步码');
+                return;
+            }
             const SyncCode = AV.Object.extend('SyncCode');
             const query = new AV.Query(SyncCode);
             query.equalTo('userId', currentUserId);
@@ -1204,17 +1206,21 @@
 
         // 更新所有同步码显示
         function updateSyncCodeDisplay() {
+            console.log('更新同步码显示:', currentSyncCode); // 调试日志
+            
             if (currentSyncCode) {
                 // 更新原同步模态框中的显示
                 const syncCode1 = document.getElementById('displaySyncCode');
                 if (syncCode1) {
                     syncCode1.textContent = currentSyncCode;
+                    console.log('更新displaySyncCode:', currentSyncCode);
                 }
                 
                 // 更新登录模态框中的同步码显示
                 const syncCode2 = document.getElementById('displaySyncCode2');
                 if (syncCode2) {
                     syncCode2.textContent = currentSyncCode;
+                    console.log('更新displaySyncCode2:', currentSyncCode);
                 }
             } else {
                 // 如果没有同步码，显示占位符
