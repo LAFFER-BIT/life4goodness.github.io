@@ -195,13 +195,13 @@
             </div>
             
             <!-- 同步码表单 -->
-            <div id="syncCodeForm" class="login-form" style="display: none;">
+            <div id="syncCodeForm" class="login-form">
                 <!-- 同步状态信息 -->
                 <div id="syncStatusInfo" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin-bottom: 20px; font-size: 0.85rem;">
                     <strong>💡 状态:</strong><span id="syncStatusText">正在检查连接...</span>
                 </div>
                 
-                <div id="syncCodeSection">
+                <div id="syncCodeSection" style="margin-bottom: 20px;">
                     <div class="sync-code-display">
                         <div style="font-size: 1.1rem; margin-bottom: 10px;">您的同步码</div>
                         <div class="sync-code" id="displaySyncCode">------</div>
@@ -211,7 +211,7 @@
                     <div style="text-align: center; margin: 28px 0; color: #9ca3af; font-weight: 500;">或</div>
                 </div>
                 
-                <div>
+                <div style="margin-bottom: 16px;">
                     <h3 style="margin-bottom: 14px; color: #374151; font-weight: 600;">输入其他设备的同步码</h3>
                     <div style="display: flex; gap: 12px;">
                         <input type="text" id="inputSyncCode" class="input" placeholder="123456" maxlength="6" style="flex: 1; text-align: center; font-size: 1.8rem; letter-spacing: 6px; font-family: 'Courier New', monospace;">
@@ -1180,8 +1180,18 @@
         function updateSyncCodeDisplay() {
             console.log('更新同步码显示:', currentSyncCode); // 调试日志
             
+            // 更新状态文本
+            const statusText = document.getElementById('syncStatusText');
+            if (statusText) {
+                if (currentSyncCode) {
+                    statusText.textContent = '云同步已启用';
+                } else {
+                    statusText.textContent = '正在检查连接...';
+                }
+            }
+            
             if (currentSyncCode) {
-                // 更新原同步模态框中的显示
+                // 更新同步码显示
                 const syncCode1 = document.getElementById('displaySyncCode');
                 if (syncCode1) {
                     syncCode1.textContent = currentSyncCode;
