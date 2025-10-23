@@ -7,7 +7,7 @@
     
     <!-- LeanCloud SDK -->
     <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-min.js"></script>
-    
+
     <!-- 配置文件（从外部加载，在部署时由GitHub Actions生成） -->
     <script src="./config.js"></script>
 
@@ -2460,7 +2460,18 @@
                 }
             };
             
-            // AI相关
+            // AI相关 - 加载保存的API密钥
+            function loadAPIKeys() {
+                const deepseekKey = localStorage.getItem('deepseekApiKey');
+                const qwenKey = localStorage.getItem('qwenApiKey');
+                if (deepseekKey) {
+                    document.getElementById('deepseekApiKey').value = deepseekKey;
+                }
+                if (qwenKey) {
+                    document.getElementById('qwenApiKey').value = qwenKey;
+                }
+                console.log('✅ API密钥已加载');
+            }
             loadAPIKeys();
             
             document.getElementById('testDeepSeekBtn').onclick = testDeepSeekConnection;
