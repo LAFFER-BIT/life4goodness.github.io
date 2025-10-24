@@ -931,6 +931,9 @@
 
         // ============ LeanCloud初始化 ============
         async function initLeanCloud() {
+            
+            console.log('🚀 开始初始化LeanCloud...');
+            const config = getLeanCloudConfig();
             if (typeof AV === 'undefined') {
                 console.error('❌ LeanCloud SDK未加载');
                 updateSyncIndicator('offline', '离线模式');
