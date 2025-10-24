@@ -903,6 +903,32 @@
             document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
         }
 
+
+        // ============ LeanCloud配置和初始化 ============
+        function getLeanCloudConfig() {
+            if (typeof window.APP_CONFIG !== 'undefined' && window.APP_CONFIG.production) {
+                const cfg = window.APP_CONFIG.production.leancloud;
+                return {
+                    appId: cfg.appId,
+                    appKey: cfg.appKey,
+                    serverURL: cfg.serverURL
+                };
+            }
+            
+            const stored = localStorage.getItem('leancloud_config');
+            if (stored) {
+                try {
+                    console.log('✅ 使用本地存储的LeanCloud配置');
+                    return JSON.parse(stored);
+                } catch (e) {
+                    console.error('❌ 解析本地配置失败');
+                }
+            }
+            
+            console.log('⚠️ 未找到LeanCloud配置');
+            return null;
+        }
+
         // ============ LeanCloud初始化 ============
         async function initLeanCloud() {
             if (typeof AV === 'undefined') {
@@ -2283,20 +2309,20 @@
 
         async function parseIngredients(text) {
             try {
-                const apiKey = localStorage.getItem('deepseekApiKey');
+                const apiKey = localStorage.getItem('qwenApiKey');
                 if (!apiKey) {
-                    alert('请先配置DeepSeek API密钥');
+                    alert('请先配置Qwen API密钥');
                     return;
                 }
-                
-                const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+
+                const response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${apiKey}`
                     },
                     body: JSON.stringify({
-                        model: 'deepseek-chat',
+                        model: 'qwen-flash',
                         messages: [{
                             role: 'user',
                             content: `请从以下文本中提取食材信息，以JSON数组格式返回，每个食材包含name(名称)、quantity(数量)、unit(单位)三个字段：\n\n${text}`
