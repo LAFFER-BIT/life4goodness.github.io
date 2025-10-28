@@ -942,8 +942,13 @@
                 return;
             }
             
-            if (typeof window.LEANCLOUD_CONFIG === 'undefined') {
-                console.error('❌ 缺少配置文件');
+            // 检查配置是否存在 - 支持多种配置方式
+            if (!config || !config.appId || !config.appKey) {
+                console.error('❌ 缺少LeanCloud配置');
+                console.error('请确保以下任一配置可用:');
+                console.error('1. window.APP_CONFIG.production.leancloud');
+                console.error('2. localStorage中的leancloud_config');
+                console.error('3. 外部config.js文件中的window.LEANCLOUD_CONFIG');
                 updateSyncIndicator('offline', '离线模式');
                 loadLocalData();
                 renderAll();
@@ -951,7 +956,7 @@
             }
             
             try {
-                AV.init(window.LEANCLOUD_CONFIG);
+                AV.init(config);  // 使用getLeanCloudConfig()返回的配置
                 leanCloudInitialized = true;
                 console.log('✅ LeanCloud初始化成功');
                 
